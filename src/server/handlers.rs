@@ -11,9 +11,10 @@ use bytes::Bytes;
 use serde_json::{Value, json};
 
 use crate::config::AppConfig;
-use crate::opencode::executor::OpenCodeExecutor;
+use crate::opencode::executor::{OpenCodeExecutor, PoolExhaustedError};
 use crate::opencode::models::{FreeModel, ModelCatalog};
 use crate::opencode::transform::transform_chat_request;
+use crate::proxy::pool::ProxyPool;
 use crate::server::error::{ApiError, forward_upstream_error};
 use crate::stream::aggregator::{AggregatorError, aggregate_sse_to_json};
 use crate::stream::passthrough::into_normalized_sse_stream;
@@ -23,6 +24,7 @@ pub struct AppState {
     pub config: AppConfig,
     pub catalog: ModelCatalog,
     pub executor: OpenCodeExecutor,
+    pub proxy_pool: Option<Arc<ProxyPool>>,
     pub started_at: Instant,
 }
 
@@ -32,11 +34,20 @@ fn format_model_object(m: &FreeModel) -> Value {
 
 /// `GET /health`
 pub async fn health(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    Json(json!({
+    let mut payload = json!({
         "status": "ok",
         "uptime_secs": state.started_at.elapsed().as_secs(),
         "cached_models": state.catalog.cached_count(),
-    }))
+    });
+    if let Some(pool) = &state.proxy_pool
+        && let Some(obj) = payload.as_object_mut()
+    {
+        obj.insert(
+            "proxy_pool".to_string(),
+            serde_json::to_value(pool.stats()).unwrap_or(Value::Null),
+        );
+    }
+    Json(payload)
 }
 
 /// `GET /v1/models` and `GET /models`
@@ -110,9 +121,15 @@ pub async fn chat_completions(
 
     let upstream = state
         .executor
-        .execute_chat(&headers, Bytes::from(serialized), &session)
+        .execute_chat_with_body(&headers, Some(&body), Bytes::from(serialized), &session)
         .await
-        .map_err(|e| ApiError::bad_gateway(format!("upstream request failed: {e}")))?;
+        .map_err(|e| {
+            if e.downcast_ref::<PoolExhaustedError>().is_some() {
+                ApiError::service_unavailable(e.to_string())
+            } else {
+                ApiError::bad_gateway(format!("upstream request failed: {e}"))
+            }
+        })?;
 
     if !upstream.status.is_success() {
         let (status, _, raw_err) = upstream

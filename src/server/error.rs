@@ -49,6 +49,15 @@ impl ApiError {
             code: None,
         }
     }
+
+    pub fn service_unavailable(message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::SERVICE_UNAVAILABLE,
+            message: message.into(),
+            error_type: "service_unavailable".to_string(),
+            code: Some("proxy_pool_exhausted".to_string()),
+        }
+    }
 }
 
 impl IntoResponse for ApiError {

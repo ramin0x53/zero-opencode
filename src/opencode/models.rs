@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -5,8 +6,12 @@ use anyhow::{Context, bail};
 use serde::Serialize;
 use serde_json::{Map, Value, json};
 use tokio::sync::RwLock;
-use tracing::warn;
+use tracing::{debug, warn};
 use wreq::Client;
+
+use crate::opencode::tls_client::resolve_wreq_proxy;
+use crate::proxy::endpoint::ProxyId;
+use crate::proxy::pool::ProxyPool;
 
 pub const OPENCODE_MODELS_URL: &str = "https://opencode.ai/zen/v1/models";
 
@@ -464,6 +469,12 @@ struct CachedModels {
     fetched_at: Instant,
 }
 
+#[derive(Clone)]
+struct ModelPoolRoute {
+    pool: Arc<ProxyPool>,
+    pool_client: Client,
+}
+
 /// Caching live catalog client for OpenCode's free models.
 #[derive(Clone)]
 pub struct ModelCatalog {
@@ -471,6 +482,7 @@ pub struct ModelCatalog {
     url: String,
     ttl: Duration,
     cache: Arc<RwLock<Option<CachedModels>>>,
+    pool_route: Option<ModelPoolRoute>,
 }
 
 impl ModelCatalog {
@@ -484,7 +496,15 @@ impl ModelCatalog {
             url: url.into(),
             ttl,
             cache: Arc::new(RwLock::new(None)),
+            pool_route: None,
         }
+    }
+
+    /// Attach a proxy pool so model catalog refreshes prefer healthy pool proxies
+    /// (falling back to `base_client` while the pool warms up).
+    pub fn with_proxy_pool(mut self, pool: Arc<ProxyPool>, pool_client: Client) -> Self {
+        self.pool_route = Some(ModelPoolRoute { pool, pool_client });
+        self
     }
 
     /// Pre-seed the catalog cache (useful for offline unit/router tests).
@@ -547,6 +567,57 @@ impl ModelCatalog {
     }
 
     async fn fetch_fresh(&self) -> anyhow::Result<Vec<FreeModel>> {
+        if let Some(route) = &self.pool_route {
+            let mut excluded: HashSet<ProxyId> = HashSet::new();
+            for _ in 0..3 {
+                let Some(ep) = route.pool.select_proxy(&excluded) else {
+                    break;
+                };
+                excluded.insert(ep.id);
+                let Ok(wreq_proxy) = resolve_wreq_proxy(&ep, route.pool.bridge()) else {
+                    continue;
+                };
+                let started = Instant::now();
+                match route
+                    .pool_client
+                    .get(&self.url)
+                    .proxy(wreq_proxy)
+                    .send()
+                    .await
+                {
+                    Ok(res) => {
+                        let status = res.status();
+                        let body = res.text().await.unwrap_or_default();
+                        if status.is_success()
+                            && let Ok(models) = filter_free_models_json(&body)
+                            && !models.is_empty()
+                        {
+                            route
+                                .pool
+                                .report_liveness_ok(ep.id, started.elapsed().as_millis() as u64);
+                            return Ok(models);
+                        }
+                        if status == http::StatusCode::FORBIDDEN {
+                            route.pool.report_forbidden(ep.id, "models HTTP 403");
+                        } else if status == http::StatusCode::TOO_MANY_REQUESTS {
+                            route.pool.report_rate_limited(ep.id, None, "models HTTP 429");
+                        } else {
+                            route
+                                .pool
+                                .report_transport_error(ep.id, format!("models HTTP {}", status.as_u16()));
+                        }
+                    }
+                    Err(err) => {
+                        debug!(proxy = %ep.redacted(), error = %err, "models fetch via pool proxy failed");
+                        if route.pool.bridge().is_some_and(|b| b.is_hop1_failing()) {
+                            break;
+                        }
+                        route.pool.report_transport_error(ep.id, err.to_string());
+                    }
+                }
+            }
+        }
+
         let res = self
             .client
             .get(&self.url)

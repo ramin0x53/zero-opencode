@@ -7,6 +7,8 @@ use regex::Regex;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
+use crate::proxy::endpoint::ProxyId;
+
 const MAX_SESSION_LENGTH: usize = 256;
 const MAX_TRANSLATED_SESSIONS: usize = 5000;
 const MAX_STABLE_SESSIONS: usize = 1000;
@@ -151,11 +153,24 @@ impl SessionManager {
 
     /// Translate an arbitrary client session key into a memoized, current-time `ses_...` ID.
     pub fn translate_session_id(&self, hint: &str) -> String {
+        self.translate_session_id_scoped(hint, None)
+    }
+
+    /// Translate an arbitrary client session key into a memoized, current-time `ses_...` ID
+    /// optionally namespaced to a specific proxy so each proxy IP keeps an isolated session.
+    pub fn translate_session_id_scoped(
+        &self,
+        hint: &str,
+        proxy_scope: Option<ProxyId>,
+    ) -> String {
         let trimmed = hint.trim();
         if is_valid_opencode_session(trimmed) {
             return trimmed.to_string();
         }
-        let key = format!("generic\0{trimmed}");
+        let key = match proxy_scope {
+            Some(pid) => format!("p:{}\0generic\0{trimmed}", pid.0),
+            None => format!("generic\0{trimmed}"),
+        };
         let now = Instant::now();
         let mut cache = self.translated.lock().expect("translated sessions lock");
         if let Some(existing) = cache.get_and_touch(&key, now) {
@@ -172,7 +187,20 @@ impl SessionManager {
 
     /// Return or mint a stable session ID for a downstream caller identity.
     pub fn stable_session_id(&self, headers: &HeaderMap) -> String {
-        let key = identity_key(headers);
+        self.stable_session_id_scoped(headers, None)
+    }
+
+    /// Return or mint a stable session ID scoped to `(caller_identity, proxy_id)`.
+    pub fn stable_session_id_scoped(
+        &self,
+        headers: &HeaderMap,
+        proxy_scope: Option<ProxyId>,
+    ) -> String {
+        let base_key = identity_key(headers);
+        let key = match proxy_scope {
+            Some(pid) => format!("p:{}\0{base_key}", pid.0),
+            None => base_key,
+        };
         let now = Instant::now();
         let mut cache = self.stable.lock().expect("stable sessions lock");
         if let Some(existing) = cache.get_and_touch(&key, now) {
@@ -191,6 +219,17 @@ impl SessionManager {
 
     /// Resolve the upstream OpenCode session ID for an incoming request.
     pub fn resolve_session(&self, headers: &HeaderMap, body: &Value) -> ResolvedSession {
+        self.resolve_session_for_proxy(headers, body, None)
+    }
+
+    /// Resolve the upstream OpenCode session ID scoped to a specific proxy (if provided).
+    /// Native client-supplied `ses_...` headers are preserved unchanged.
+    pub fn resolve_session_for_proxy(
+        &self,
+        headers: &HeaderMap,
+        body: &Value,
+        proxy_scope: Option<ProxyId>,
+    ) -> ResolvedSession {
         if let Some(incoming) = header_value(headers, OPENCODE_SESSION_HEADER) {
             if is_valid_opencode_session(&incoming) {
                 return ResolvedSession {
@@ -199,20 +238,20 @@ impl SessionManager {
                 };
             }
             return ResolvedSession {
-                id: self.translate_session_id(&incoming),
+                id: self.translate_session_id_scoped(&incoming, proxy_scope),
                 is_native: false,
             };
         }
 
         if let Some(hint) = extract_client_session_hint(headers, body) {
             return ResolvedSession {
-                id: self.translate_session_id(&hint),
+                id: self.translate_session_id_scoped(&hint, proxy_scope),
                 is_native: false,
             };
         }
 
         ResolvedSession {
-            id: self.stable_session_id(headers),
+            id: self.stable_session_id_scoped(headers, proxy_scope),
             is_native: false,
         }
     }
@@ -521,5 +560,24 @@ mod tests {
         let second = mgr.resolve_session(&headers, &json!({}));
         assert_ne!(first.id, second.id);
         assert!(is_valid_opencode_session(&second.id));
+    }
+
+    #[test]
+    fn isolates_sessions_per_proxy_id_while_reusing_same_proxy_session() {
+        let mgr = SessionManager::new(Duration::from_secs(7200));
+        let p1_a = mgr.resolve_session_for_proxy(&HeaderMap::new(), &json!({}), Some(ProxyId(1)));
+        let p1_b = mgr.resolve_session_for_proxy(&HeaderMap::new(), &json!({}), Some(ProxyId(1)));
+        let p2 = mgr.resolve_session_for_proxy(&HeaderMap::new(), &json!({}), Some(ProxyId(2)));
+
+        assert_eq!(p1_a.id, p1_b.id);
+        assert_ne!(p1_a.id, p2.id);
+
+        // Dropping p1 does not disturb p2
+        assert!(mgr.forget_session(&p1_a.id));
+        let p1_new = mgr.resolve_session_for_proxy(&HeaderMap::new(), &json!({}), Some(ProxyId(1)));
+        let p2_again =
+            mgr.resolve_session_for_proxy(&HeaderMap::new(), &json!({}), Some(ProxyId(2)));
+        assert_ne!(p1_new.id, p1_a.id);
+        assert_eq!(p2_again.id, p2.id);
     }
 }

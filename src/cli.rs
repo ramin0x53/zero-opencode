@@ -37,4 +37,16 @@ pub enum Command {
         /// Model ID to test (defaults to the first preferred active free model)
         model: Option<String>,
     },
+    /// Inspect loaded proxy pool candidates and optionally run live two-stage health checks
+    Proxies {
+        /// Output raw JSON
+        #[arg(long)]
+        json: bool,
+        /// Run two-stage live health checks (models + inference limit) up to target_healthy
+        #[arg(long)]
+        probe: bool,
+        /// Maximum number of proxies to display
+        #[arg(long, default_value_t = 50)]
+        limit: usize,
+    },
 }

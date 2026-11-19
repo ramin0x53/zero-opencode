@@ -166,6 +166,7 @@ mod tests {
                     status: StatusCode::OK,
                     headers: HeaderMap::new(),
                     body: UpstreamBody::Buffered(Bytes::from_static(self.sse_payload.as_bytes())),
+                    used_proxy: None,
                 })
             })
         }
@@ -194,6 +195,7 @@ mod tests {
             config: cfg,
             catalog,
             executor,
+            proxy_pool: None,
             started_at: Instant::now(),
         });
         (state, transport)
@@ -406,5 +408,137 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(missing_res.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn health_includes_proxy_pool_stats_when_pool_is_present() {
+        use crate::config::ProxyPoolConfig;
+        use crate::proxy::endpoint::{ParsedProxy, ProxyId};
+        use crate::proxy::pool::ProxyPool;
+
+        let pp_cfg = ProxyPoolConfig {
+            enabled: true,
+            ..Default::default()
+        };
+        let pool = ProxyPool::new(
+            pp_cfg,
+            vec![ParsedProxy::parse_explicit("socks5://1.2.3.4:1080", false).unwrap()],
+            None,
+        );
+        pool.report_success(ProxyId(1), 42);
+
+        let mut cfg = AppConfig::default();
+        cfg.opencode.proxy_pool.enabled = true;
+        let client = build_opencode_client(None, 30).unwrap();
+        let catalog = ModelCatalog::new(client, Duration::from_secs(600));
+        let sessions = Arc::new(SessionManager::new(Duration::from_secs(7200)));
+        let transport = Arc::new(CaptureTransport {
+            sent_bodies: Mutex::new(Vec::new()),
+            sse_payload: "",
+        });
+        let executor = OpenCodeExecutor::with_transport(
+            transport,
+            sessions,
+            RetryConfig::default(),
+            OPENCODE_CHAT_URL,
+        );
+        let state = Arc::new(AppState {
+            config: cfg,
+            catalog,
+            executor,
+            proxy_pool: Some(pool),
+            started_at: Instant::now(),
+        });
+
+        let app = build_router(state);
+        let res = app
+            .oneshot(Request::builder().uri("/health").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        let bytes = res.into_body().collect().await.unwrap().to_bytes();
+        let body: Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(body["proxy_pool"]["enabled"], true);
+        assert_eq!(body["proxy_pool"]["healthy"], 1);
+        assert_eq!(body["proxy_pool"]["total"], 1);
+        assert_eq!(body["proxy_pool"]["hop1_healthy"], true);
+    }
+
+    #[tokio::test]
+    async fn chat_completions_returns_503_when_proxy_pool_exhausted() {
+        use crate::config::ProxyPoolConfig;
+        use crate::opencode::executor::RoutedTransport;
+        use crate::proxy::endpoint::ProxyEndpoint;
+        use crate::proxy::pool::ProxyPool;
+
+        struct AlwaysEmptyTransport;
+        impl RoutedTransport for AlwaysEmptyTransport {
+            fn post_via<'a>(
+                &'a self,
+                _proxy: Option<&'a ProxyEndpoint>,
+                _url: &'a str,
+                _headers: HeaderMap,
+                _body: Bytes,
+            ) -> Pin<Box<dyn Future<Output = anyhow::Result<UpstreamResponse>> + Send + 'a>> {
+                Box::pin(async move { anyhow::bail!("unreachable") })
+            }
+        }
+
+        let mut pp_cfg = ProxyPoolConfig {
+            enabled: true,
+            ..Default::default()
+        };
+        pp_cfg.selection.failover_timeout_secs = Some(1);
+        pp_cfg.selection.fallback_to_base = false;
+
+        // No proxies ever become healthy -> PoolExhaustedError -> 503
+        let pool = ProxyPool::new(pp_cfg, vec![], None);
+        let mut cfg = AppConfig::default();
+        cfg.opencode.proxy_pool.enabled = true;
+
+        let client = build_opencode_client(None, 30).unwrap();
+        let catalog = ModelCatalog::new(client, Duration::from_secs(600));
+        let sessions = Arc::new(SessionManager::new(Duration::from_secs(7200)));
+        let base_transport = Arc::new(CaptureTransport {
+            sent_bodies: Mutex::new(Vec::new()),
+            sse_payload: "",
+        });
+        let executor = OpenCodeExecutor::with_pooled_transport(
+            base_transport,
+            Arc::new(AlwaysEmptyTransport),
+            Arc::clone(&pool),
+            sessions,
+            RetryConfig::default(),
+            OPENCODE_CHAT_URL,
+        );
+        let state = Arc::new(AppState {
+            config: cfg,
+            catalog,
+            executor,
+            proxy_pool: Some(pool),
+            started_at: Instant::now(),
+        });
+
+        let app = build_router(state);
+        let req_body = json!({
+            "model": "big-pickle",
+            "stream": false,
+            "messages": [{"role": "user", "content": "hi"}]
+        });
+        let res = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/v1/chat/completions")
+                    .header("content-type", "application/json")
+                    .body(Body::from(serde_json::to_vec(&req_body).unwrap()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::SERVICE_UNAVAILABLE);
+        let bytes = res.into_body().collect().await.unwrap().to_bytes();
+        let body: Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(body["error"]["code"], "proxy_pool_exhausted");
     }
 }

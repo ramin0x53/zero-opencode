@@ -11,7 +11,11 @@ A lightweight Rust CLI proxy that connects to OpenCode's free tier (`https://ope
 - **All Available Free Models**: Fetches and caches the live free model catalog from `https://opencode.ai/zen/v1/models` with 9router-compatible `capabilities` (`vision`, `pdf`, `audioInput`, `videoInput`, `tools`, `reasoning`, `thinkingFormat`, `contextWindow`, `maxOutput`), `context_length`, `max_completion_tokens`, `thinking_levels`, and full OpenCode metadata (`modalities`, `limit`, `cost`, `api`, `description`, etc.)
 - **Forced-Stream SSE & Non-Streaming Aggregation**: Always streams upstream (required by OpenCode Free) and transparently returns either normalized SSE chunks (`stream: true`) or aggregated `chat.completion` JSON (`stream: false`)
 - **Reasoning & Thinking Support**: Supports `oc/` / `opencode/` model prefixes, `model(level)` effort suffixes (e.g. `deepseek-v4.1-flash-free(max)`), `reasoning_effort`, vendor reasoning alias lifting (`reasoning` / `reasoning_details[]` → `reasoning_content`), and multi-turn `reasoning_content` placeholder injection
-- **Overload Retry & Proxy Support**: Retries transient `429 overloaded` responses with jittered backoff while keeping the same session, and supports optional HTTP/HTTPS/SOCKS5 upstream proxies
+- **Overload Retry & Rotating Proxy Pool**: Retries transient `429 overloaded` responses with jittered backoff, supports single HTTP/HTTPS/SOCKS4/SOCKS5 upstream proxies, and includes an optional health-checked rotating proxy pool with:
+  - Remote proxy list URL loaders (`socks5` / `socks4` / `http` / `mixed`) + `static_proxies`, deduplicated and periodically refreshed (replacing old candidates in memory)
+  - Universal chaining through `opencode.proxy` when defined (all source fetches, health checks, keep-alive pings, and live requests tunnel through it)
+  - Hardcoded two-stage health checks (`GET /zen/v1/models` reachability + `POST /inference/v1/chat/completions` limit verification) and hot-standby TLS keep-alive warming
+  - Seamless retry-until-success failover with first-frame SSE peeking, per-proxy session isolation, and Option A speculative hedging (`hedge_delay_ms`)
 - **Optional Local Auth & CORS**: Protect `/v1/*` routes with `server.api_key` (`Authorization: Bearer ...` or `x-api-key`)
 
 ---
@@ -61,7 +65,7 @@ server:
   cors: true
 
 opencode:
-  proxy: null                # Optional HTTP/HTTPS/SOCKS5 upstream proxy URL
+  proxy: null                # Optional base/chain proxy URL (HTTP/HTTPS/SOCKS4/SOCKS5); chains ALL pool & fetch traffic when set
   timeout_secs: 120          # Per-read / idle timeout in seconds
   models_ttl_secs: 600       # Live catalog cache TTL (/zen/v1/models)
   session_ttl_secs: 7200     # Session cache TTL (2 hours)
@@ -69,6 +73,37 @@ opencode:
     max_attempts: 8          # Total attempts for transient 429 overloaded (~20s backoff)
     base_delay_ms: 800
     max_delay_ms: 4000
+  proxy_pool:
+    enabled: false           # Enable health-checked rotating proxy pool
+    sources:
+      socks5: []             # URLs returning SOCKS5 proxies (bare ip:port -> socks5h://)
+      socks4: []             # URLs returning SOCKS4 proxies (bare ip:port -> socks4a://)
+      http: []               # URLs returning HTTP proxies (bare ip:port -> http://)
+      mixed: []              # URLs where each line/item carries an explicit scheme
+    static_proxies: []       # Optional inline proxy URLs (scheme://[user:pass@]host:port)
+    refresh_interval_secs: 900
+    max_proxies: 2000        # Cap unique candidates in memory (null = unlimited)
+    allow_private_proxies: false
+    health_check:
+      concurrency: 25
+      timeout_secs: 6
+      interval_secs: 180
+      keepalive_interval_secs: 45
+      hot_standby_count: 3
+      target_healthy: 20
+      startup_wait_secs: 15
+    selection:
+      strategy: "sticky"     # sticky | lowest_latency | round_robin
+      connect_timeout_secs: 4
+      first_byte_timeout_secs: 12
+      failover_timeout_secs: 90
+      hedge_delay_ms: 2000   # Speculative parallel standby failover (null = disable)
+      cooldown_rate_limit_secs: 600
+      cooldown_forbidden_secs: 900
+      cooldown_overload_secs: 15
+      cooldown_error_base_secs: 60
+      max_consecutive_failures: 3
+      fallback_to_base: false
 
 streaming:
   keep_reasoning_on_json: false  # false = strip reasoning_content in non-stream JSON when content is non-empty
@@ -95,6 +130,11 @@ zero-opencode -c config.yaml models --json
 # Run a live smoke test (non-streaming + streaming) against OpenCode Free
 zero-opencode -c config.yaml test
 zero-opencode -c config.yaml test mimo-v2.6-flash-free
+
+# Inspect loaded proxy pool candidates and run two-stage health checks
+zero-opencode -c config.yaml proxies
+zero-opencode -c config.yaml proxies --probe
+zero-opencode -c config.yaml proxies --probe --json
 ```
 
 Using Cargo during development:
