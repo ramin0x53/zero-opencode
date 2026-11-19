@@ -335,4 +335,76 @@ mod tests {
         assert!(text.contains("\"content\":\"OK\""));
         assert!(text.ends_with("data: [DONE]\n\n"));
     }
+
+    #[tokio::test]
+    async fn models_endpoint_returns_9router_capabilities_and_opencode_metadata() {
+        let raw = r#"{
+            "object": "list",
+            "data": [{
+                "id": "mimo-v2.6-flash-free",
+                "name": "MiMo-V2.6-Flash Free",
+                "canonical_id": "xiaomi/mimo-v2.6-flash",
+                "type": "chat",
+                "description": "Multimodal model",
+                "modalities": {"input": ["text", "image/jpeg", "audio/mpeg", "video/mp4"], "output": ["text"]},
+                "limit": {"context": 200000, "output": 32000},
+                "capabilities": {"tools": {"supported": true}, "reasoning": {"supported": true}},
+                "cost": {"text": {"input": {"price": 0}, "output": {"price": 0}}},
+                "recommended_api": "chat-completions"
+            }]
+        }"#;
+        let models = crate::opencode::models::filter_free_models_json(raw).unwrap();
+        let (state, _) = make_test_state(None, "");
+        state.catalog.seed(models).await;
+        let app = build_router(state);
+
+        let list_res = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/v1/models")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(list_res.status(), StatusCode::OK);
+        let list_bytes = list_res.into_body().collect().await.unwrap().to_bytes();
+        let list_json: Value = serde_json::from_slice(&list_bytes).unwrap();
+        assert_eq!(list_json["object"], "list");
+        let item = &list_json["data"][0];
+        assert_eq!(item["id"], "mimo-v2.6-flash-free");
+        assert_eq!(item["canonical_id"], "xiaomi/mimo-v2.6-flash");
+        assert_eq!(item["description"], "Multimodal model");
+        assert_eq!(item["context_length"], 200_000);
+        assert_eq!(item["max_completion_tokens"], 32_000);
+        assert_eq!(item["capabilities"]["vision"], true);
+        assert_eq!(item["capabilities"]["audioInput"], true);
+        assert_eq!(item["capabilities"]["videoInput"], true);
+        assert!(item["modalities"].is_object());
+        assert!(item["cost"].is_object());
+
+        let single_res = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/v1/models/mimo-v2.6-flash-free")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(single_res.status(), StatusCode::OK);
+
+        let missing_res = app
+            .oneshot(
+                Request::builder()
+                    .uri("/v1/models/unknown-model")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(missing_res.status(), StatusCode::NOT_FOUND);
+    }
 }

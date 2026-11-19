@@ -27,25 +27,7 @@ pub struct AppState {
 }
 
 fn format_model_object(m: &FreeModel) -> Value {
-    let mut obj = json!({
-        "id": m.id,
-        "object": "model",
-        "created": m.created,
-        "owned_by": m.owned_by,
-        "name": m.name,
-        "recommended_api": m.recommended_api,
-    });
-    let map = obj.as_object_mut().expect("json object");
-    if let Some(ctx) = m.context_window {
-        map.insert("context_window".to_string(), json!(ctx));
-    }
-    if let Some(max_out) = m.max_output_tokens {
-        map.insert("max_output_tokens".to_string(), json!(max_out));
-    }
-    if let Some(levels) = &m.thinking_levels {
-        map.insert("thinking_levels".to_string(), json!(levels));
-    }
-    obj
+    m.to_api_json()
 }
 
 /// `GET /health`

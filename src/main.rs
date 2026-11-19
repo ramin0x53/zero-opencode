@@ -72,7 +72,8 @@ async fn main() -> anyhow::Result<()> {
 async fn run_models_cmd(catalog: &ModelCatalog, as_json: bool) -> anyhow::Result<()> {
     let models = catalog.list().await?;
     if as_json {
-        println!("{}", serde_json::to_string_pretty(&models)?);
+        let json_list: Vec<Value> = models.iter().map(FreeModel::to_api_json).collect();
+        println!("{}", serde_json::to_string_pretty(&json_list)?);
         return Ok(());
     }
 
@@ -82,10 +83,10 @@ async fn run_models_cmd(catalog: &ModelCatalog, as_json: bool) -> anyhow::Result
     }
 
     println!(
-        "{:<32} {:<10} {:<10} {:<18} THINKING LEVELS",
-        "ID", "CONTEXT", "MAX OUT", "LANE"
+        "{:<30} {:<10} {:<10} {:<26} THINKING LEVELS",
+        "ID", "CONTEXT", "MAX OUT", "CAPABILITIES"
     );
-    println!("{}", "-".repeat(92));
+    println!("{}", "-".repeat(110));
     for m in &models {
         let ctx = m
             .context_window
@@ -95,14 +96,15 @@ async fn run_models_cmd(catalog: &ModelCatalog, as_json: bool) -> anyhow::Result
             .max_output_tokens
             .map(|v| v.to_string())
             .unwrap_or_else(|| "-".into());
+        let caps = m.capability_tags();
         let efforts = m
             .thinking_levels
             .as_ref()
             .map(|v| v.join(","))
             .unwrap_or_else(|| "-".into());
         println!(
-            "{:<32} {:<10} {:<10} {:<18} {}",
-            m.id, ctx, out, m.recommended_api, efforts
+            "{:<30} {:<10} {:<10} {:<26} {}",
+            m.id, ctx, out, caps, efforts
         );
     }
     println!("\nTotal available free models: {}", models.len());
