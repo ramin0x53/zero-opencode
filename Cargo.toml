@@ -1,0 +1,39 @@
+[package]
+name = "zero-opencode"
+version = "0.1.0"
+edition = "2024"
+description = "CLI proxy connecting OpenCode free models to an OpenAI-compatible HTTP API"
+
+[lib]
+name = "zero_opencode"
+path = "src/lib.rs"
+
+[[bin]]
+name = "zero-opencode"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+axum = "0.8"
+bytes = "1"
+clap = { version = "4", features = ["derive"] }
+futures-util = "0.3"
+hex = "0.4"
+http = "1"
+rand = "0.10"
+regex = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+thiserror = "2"
+tokio = { version = "1", features = ["full"] }
+tokio-stream = "0.1"
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+wreq = { version = "6.0.0-rc.31", features = ["json", "stream", "gzip", "brotli", "deflate", "zstd", "socks"] }
+yaml_serde = "0.10"
+
+[dev-dependencies]
+http-body-util = "0.1"
+tower = { version = "0.5", features = ["util"] }

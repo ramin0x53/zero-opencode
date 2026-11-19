@@ -1,0 +1,21 @@
+server:
+  host: "127.0.0.1"
+  port: 8080
+  api_key: null              # Optional local Bearer token required on /v1/* (null = no auth)
+  cors: true
+
+opencode:
+  proxy: null                # Optional HTTP/HTTPS/SOCKS5 upstream proxy URL
+  timeout_secs: 120          # Per-read / idle timeout in seconds
+  models_ttl_secs: 600       # Live catalog cache TTL (/zen/v1/models)
+  session_ttl_secs: 7200     # Session cache TTL (2 hours, matches 9router)
+  retry:
+    max_attempts: 8          # Total attempts for transient 429 overloaded (~20s backoff)
+    base_delay_ms: 800
+    max_delay_ms: 4000
+
+streaming:
+  keep_reasoning_on_json: false  # false = strip reasoning_content in non-stream JSON when content is non-empty
+
+logging:
+  level: "info"              # trace | debug | info | warn | error
