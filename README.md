@@ -17,6 +17,7 @@ A lightweight Rust CLI proxy that connects to OpenCode's free tier (`https://ope
   - Hardcoded two-stage health checks (`GET /zen/v1/models` reachability + `POST /inference/v1/chat/completions` limit verification) and hot-standby TLS keep-alive warming
   - Seamless retry-until-success failover with first-frame SSE peeking, per-proxy session isolation, and Option A speculative hedging (`hedge_delay_ms`)
 - **Optional Local Auth & CORS**: Protect `/v1/*` routes with `server.api_key` (`Authorization: Bearer ...` or `x-api-key`)
+- **Embedded Web Dashboard**: Optional password-protected UI at `/dashboard` showing live proxy pool status, recent request history, per-model usage & latency, cached free models, and manual probe/refresh controls
 
 ---
 
@@ -63,6 +64,15 @@ server:
   port: 8080
   api_key: null              # Optional local Bearer token required on /v1/* (null = no auth)
   cors: true
+
+dashboard:
+  enabled: false             # Enable embedded web status dashboard at /dashboard
+  host: null                 # Optional dedicated dashboard host (null = share server.host)
+  port: null                 # Optional dedicated dashboard port (null = share server.port)
+  username: "admin"          # Dashboard login username
+  password: ""               # Required when dashboard.enabled is true
+  session_ttl_secs: 43200    # Browser session cookie TTL (12 hours)
+  max_request_history: 200   # Recent requests kept in memory
 
 opencode:
   proxy: null                # Optional base/chain proxy URL (HTTP/HTTPS/SOCKS4/SOCKS5); chains ALL pool & fetch traffic when set
@@ -155,6 +165,7 @@ cargo run -- -c config.example.yaml test
 | `GET` | `/v1/models` (or `/models`) | `api_key` if set | List all active OpenCode free models with capabilities and metadata |
 | `GET` | `/v1/models/{id}` (or `/models/{id}`) | `api_key` if set | Get metadata for a single free model (`404` if not found) |
 | `POST` | `/v1/chat/completions` (or `/chat/completions`) | `api_key` if set | OpenAI-compatible Chat Completions (streaming & non-streaming) |
+| `GET` | `/dashboard` (when `dashboard.enabled: true`) | Dashboard login | Embedded web dashboard (served on `dashboard.host:dashboard.port` if set, otherwise on `server.host:server.port`) |
 
 ### Examples
 

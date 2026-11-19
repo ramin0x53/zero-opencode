@@ -18,6 +18,8 @@ use zero_opencode::opencode::tls_client::build_opencode_client;
 use zero_opencode::opencode::transform::transform_chat_request;
 use zero_opencode::proxy::ProxyRuntime;
 use zero_opencode::proxy::health::{ProbeEndpoints, run_probe_wave};
+use zero_opencode::server::dashboard::DashboardAuth;
+use zero_opencode::server::metrics::MetricsStore;
 use zero_opencode::server::{self, handlers::AppState};
 use zero_opencode::stream::aggregator::aggregate_sse_to_json;
 use zero_opencode::stream::passthrough::into_normalized_sse_stream;
@@ -84,11 +86,16 @@ async fn main() -> anyhow::Result<()> {
 
     let result = match cmd {
         Command::Serve => {
+            let metrics = MetricsStore::new(config.dashboard.max_request_history);
+            let dashboard_auth = DashboardAuth::from_config(&config.dashboard);
             let state = Arc::new(AppState {
                 config,
                 catalog,
                 executor,
                 proxy_pool: proxy_runtime.as_ref().map(|r| Arc::clone(&r.pool)),
+                metrics,
+                dashboard_auth,
+                base_client: base_client.clone(),
                 started_at: Instant::now(),
             });
             server::serve(state).await

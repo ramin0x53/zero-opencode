@@ -1,8 +1,9 @@
 use std::fs;
+use std::net::IpAddr;
 use std::path::Path;
 
 use anyhow::{Context, bail};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use url::Url;
 
 use crate::proxy::endpoint::ParsedProxy;
@@ -12,9 +13,37 @@ use crate::proxy::endpoint::ParsedProxy;
 #[serde(default, deny_unknown_fields)]
 pub struct AppConfig {
     pub server: ServerConfig,
+    pub dashboard: DashboardConfig,
     pub opencode: OpenCodeConfig,
     pub streaming: StreamingConfig,
     pub logging: LoggingConfig,
+}
+
+/// Embedded web dashboard settings.
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[serde(default, deny_unknown_fields)]
+pub struct DashboardConfig {
+    pub enabled: bool,
+    pub host: Option<String>,
+    pub port: Option<u16>,
+    pub username: String,
+    pub password: String,
+    pub session_ttl_secs: u64,
+    pub max_request_history: usize,
+}
+
+impl Default for DashboardConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            host: None,
+            port: None,
+            username: "admin".to_string(),
+            password: String::new(),
+            session_ttl_secs: 43200,
+            max_request_history: 200,
+        }
+    }
 }
 
 /// Local HTTP server settings.
@@ -139,7 +168,7 @@ impl Default for ProxyHealthCheckConfig {
 }
 
 /// Proxy selection strategy among verified healthy proxies.
-#[derive(Debug, Clone, Copy, Default, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum ProxyStrategy {
     #[default]
@@ -262,6 +291,39 @@ impl AppConfig {
         Ok(cfg)
     }
 
+    /// Effective bind host for the embedded dashboard (falls back to `server.host`).
+    pub fn dashboard_host(&self) -> &str {
+        self.dashboard
+            .host
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .unwrap_or(self.server.host.trim())
+    }
+
+    /// Effective bind port for the embedded dashboard (falls back to `server.port`).
+    pub fn dashboard_port(&self) -> u16 {
+        self.dashboard.port.unwrap_or(self.server.port)
+    }
+
+    /// Whether the embedded dashboard should listen on its own separate socket
+    /// instead of sharing the main API server listener.
+    pub fn dashboard_uses_separate_listener(&self) -> bool {
+        if !self.dashboard.enabled {
+            return false;
+        }
+        let dash_port = self.dashboard_port();
+        if dash_port != self.server.port {
+            return true;
+        }
+        let dash_host = strip_host_brackets(self.dashboard_host());
+        let srv_host = strip_host_brackets(&self.server.host);
+        match (dash_host.parse::<IpAddr>(), srv_host.parse::<IpAddr>()) {
+            (Ok(d_ip), Ok(s_ip)) => d_ip != s_ip,
+            _ => dash_host != srv_host,
+        }
+    }
+
     /// Validate invariants across loaded config sections.
     pub fn validate(&self) -> anyhow::Result<()> {
         if self.server.host.trim().is_empty() {
@@ -283,6 +345,48 @@ impl AppConfig {
             ParsedProxy::parse_explicit(proxy, true).context("invalid opencode.proxy")?;
         }
         self.validate_proxy_pool()?;
+        self.validate_dashboard()?;
+        Ok(())
+    }
+
+    fn validate_dashboard(&self) -> anyhow::Result<()> {
+        if let Some(host) = &self.dashboard.host
+            && host.trim().is_empty()
+        {
+            bail!("dashboard.host must be null or a non-empty host/IP");
+        }
+        if self.dashboard.port == Some(0) {
+            bail!("dashboard.port must be null or greater than 0");
+        }
+        if self.dashboard.session_ttl_secs == 0 {
+            bail!("dashboard.session_ttl_secs must be greater than 0");
+        }
+        if self.dashboard.max_request_history == 0 {
+            bail!("dashboard.max_request_history must be greater than 0");
+        }
+        if self.dashboard.enabled {
+            if self.dashboard.username.trim().is_empty() {
+                bail!("dashboard.username must not be empty when dashboard.enabled is true");
+            }
+            if self.dashboard.password.trim().is_empty() {
+                bail!("dashboard.password must be set when dashboard.enabled is true");
+            }
+            if self.dashboard_uses_separate_listener()
+                && self.dashboard_port() == self.server.port
+            {
+                let dash_unspec = strip_host_brackets(self.dashboard_host())
+                    .parse::<IpAddr>()
+                    .is_ok_and(|ip| ip.is_unspecified());
+                let srv_unspec = strip_host_brackets(&self.server.host)
+                    .parse::<IpAddr>()
+                    .is_ok_and(|ip| ip.is_unspecified());
+                if dash_unspec || srv_unspec {
+                    bail!(
+                        "dashboard cannot bind a different host on the same port as server when either host is a wildcard address (0.0.0.0 / ::); set a distinct dashboard.port"
+                    );
+                }
+            }
+        }
         Ok(())
     }
 
@@ -358,6 +462,14 @@ impl AppConfig {
         }
         Ok(())
     }
+}
+
+fn strip_host_brackets(host: &str) -> &str {
+    let trimmed = host.trim();
+    trimmed
+        .strip_prefix('[')
+        .and_then(|s| s.strip_suffix(']'))
+        .unwrap_or(trimmed)
 }
 
 #[cfg(test)]
@@ -483,5 +595,81 @@ opencode:
             )
             .is_err()
         );
+    }
+
+    #[test]
+    fn validates_dashboard_config_credentials_and_limits() {
+        assert!(
+            AppConfig::from_yaml_str("dashboard:\n  enabled: true\n").is_err(),
+            "enabled dashboard without password must fail"
+        );
+        assert!(
+            AppConfig::from_yaml_str(
+                "dashboard:\n  enabled: true\n  username: \"   \"\n  password: \"secret\"\n"
+            )
+            .is_err(),
+            "enabled dashboard with blank username must fail"
+        );
+        assert!(
+            AppConfig::from_yaml_str("dashboard:\n  session_ttl_secs: 0\n").is_err(),
+            "zero session_ttl_secs must fail"
+        );
+        assert!(
+            AppConfig::from_yaml_str("dashboard:\n  max_request_history: 0\n").is_err(),
+            "zero max_request_history must fail"
+        );
+        let ok = AppConfig::from_yaml_str(
+            "dashboard:\n  enabled: true\n  username: \"ops\"\n  password: \"s3cr3t\"\n",
+        )
+        .expect("valid dashboard config");
+        assert!(ok.dashboard.enabled);
+        assert_eq!(ok.dashboard.username, "ops");
+        assert_eq!(ok.dashboard.password, "s3cr3t");
+        assert_eq!(ok.dashboard.session_ttl_secs, 43200);
+        assert_eq!(ok.dashboard.max_request_history, 200);
+    }
+
+    #[test]
+    fn validates_dashboard_host_and_port() {
+        let def = AppConfig::default();
+        assert_eq!(def.dashboard.host, None);
+        assert_eq!(def.dashboard.port, None);
+        assert!(!def.dashboard_uses_separate_listener());
+
+        let separate_port = AppConfig::from_yaml_str(
+            "dashboard:\n  enabled: true\n  password: \"pw\"\n  port: 8081\n",
+        )
+        .expect("separate dashboard port should parse");
+        assert_eq!(separate_port.dashboard_host(), "127.0.0.1");
+        assert_eq!(separate_port.dashboard_port(), 8081);
+        assert!(separate_port.dashboard_uses_separate_listener());
+
+        let matching = AppConfig::from_yaml_str(
+            "dashboard:\n  enabled: true\n  password: \"pw\"\n  host: \"127.0.0.1\"\n  port: 8080\n",
+        )
+        .expect("matching host and port should parse");
+        assert!(!matching.dashboard_uses_separate_listener());
+
+        assert!(
+            AppConfig::from_yaml_str("dashboard:\n  host: \"   \"\n").is_err(),
+            "blank dashboard.host must fail"
+        );
+        assert!(
+            AppConfig::from_yaml_str("dashboard:\n  port: 0\n").is_err(),
+            "dashboard.port 0 must fail"
+        );
+        assert!(
+            AppConfig::from_yaml_str(
+                "server:\n  host: \"0.0.0.0\"\n  port: 8080\ndashboard:\n  enabled: true\n  password: \"pw\"\n  host: \"127.0.0.1\"\n  port: 8080\n",
+            )
+            .is_err(),
+            "wildcard server host + different dashboard host on same port must fail"
+        );
+
+        let wildcard_distinct_port = AppConfig::from_yaml_str(
+            "server:\n  host: \"0.0.0.0\"\n  port: 8080\ndashboard:\n  enabled: true\n  password: \"pw\"\n  host: \"127.0.0.1\"\n  port: 8081\n",
+        )
+        .expect("wildcard server + dedicated dashboard port should parse");
+        assert!(wildcard_distinct_port.dashboard_uses_separate_listener());
     }
 }

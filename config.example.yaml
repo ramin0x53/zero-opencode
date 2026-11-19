@@ -4,6 +4,15 @@ server:
   api_key: null              # Optional local Bearer token required on /v1/* (null = no auth)
   cors: true
 
+dashboard:
+  enabled: false             # Enable embedded web status dashboard at /dashboard
+  host: null                 # Optional dedicated dashboard host (null = share server.host)
+  port: null                 # Optional dedicated dashboard port (null = share server.port)
+  username: "admin"          # Dashboard login username
+  password: ""               # Required when dashboard.enabled is true
+  session_ttl_secs: 43200    # Browser session cookie TTL (12 hours)
+  max_request_history: 200   # Max recent requests kept in memory for dashboard display
+
 opencode:
   proxy: null                # Optional base/chain proxy URL (HTTP/HTTPS/SOCKS4/SOCKS5); when set, ALL pool & fetch traffic chains through it
   timeout_secs: 120          # Per-read / idle timeout in seconds

@@ -1,0 +1,1509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>zero-opencode Dashboard</title>
+  <style nonce="__CSP_NONCE__">
+    :root {
+      --bg-light: #f4f6f9;
+      --surface-light: #ffffff;
+      --surface-2-light: #eef2f6;
+      --border-light: #d7dee8;
+      --text-light: #111827;
+      --muted-light: #526071;
+      --accent-light: #0d5bd9;
+      --accent-text-light: #ffffff;
+      --ok-bg-light: #dcfce7;
+      --ok-text-light: #166534;
+      --warn-bg-light: #fef3c7;
+      --warn-text-light: #92400e;
+      --err-bg-light: #fee2e2;
+      --err-text-light: #991b1b;
+      --neutral-bg-light: #e5e7eb;
+      --neutral-text-light: #374151;
+      --scroll-track-light: #e9edf3;
+      --scroll-thumb-light: #7c8798;
+
+      --bg-dark: #0d1117;
+      --surface-dark: #161b22;
+      --surface-2-dark: #1f2630;
+      --border-dark: #30363d;
+      --text-dark: #e6edf3;
+      --muted-dark: #8b949e;
+      --accent-dark: #58a6ff;
+      --accent-text-dark: #09131f;
+      --ok-bg-dark: #123322;
+      --ok-text-dark: #56d364;
+      --warn-bg-dark: #3b2a09;
+      --warn-text-dark: #e3b341;
+      --err-bg-dark: #3c1618;
+      --err-text-dark: #ff7b72;
+      --neutral-bg-dark: #282e37;
+      --neutral-text-dark: #b1bac4;
+      --scroll-track-dark: #161b22;
+      --scroll-thumb-dark: #6e7681;
+
+      --bg: var(--bg-light);
+      --surface: var(--surface-light);
+      --surface-2: var(--surface-2-light);
+      --border: var(--border-light);
+      --text: var(--text-light);
+      --muted: var(--muted-light);
+      --accent: var(--accent-light);
+      --accent-text: var(--accent-text-light);
+      --ok-bg: var(--ok-bg-light);
+      --ok-text: var(--ok-text-light);
+      --warn-bg: var(--warn-bg-light);
+      --warn-text: var(--warn-text-light);
+      --err-bg: var(--err-bg-light);
+      --err-text: var(--err-text-light);
+      --neutral-bg: var(--neutral-bg-light);
+      --neutral-text: var(--neutral-text-light);
+      --scroll-track: var(--scroll-track-light);
+      --scroll-thumb: var(--scroll-thumb-light);
+
+      color-scheme: light dark;
+      accent-color: var(--accent);
+      scrollbar-color: var(--scroll-thumb) var(--scroll-track);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: var(--bg-dark);
+        --surface: var(--surface-dark);
+        --surface-2: var(--surface-2-dark);
+        --border: var(--border-dark);
+        --text: var(--text-dark);
+        --muted: var(--muted-dark);
+        --accent: var(--accent-dark);
+        --accent-text: var(--accent-text-dark);
+        --ok-bg: var(--ok-bg-dark);
+        --ok-text: var(--ok-text-dark);
+        --warn-bg: var(--warn-bg-dark);
+        --warn-text: var(--warn-text-dark);
+        --err-bg: var(--err-bg-dark);
+        --err-text: var(--err-text-dark);
+        --neutral-bg: var(--neutral-bg-dark);
+        --neutral-text: var(--neutral-text-dark);
+        --scroll-track: var(--scroll-track-dark);
+        --scroll-thumb: var(--scroll-thumb-dark);
+      }
+    }
+
+    @supports (color: light-dark(white, black)) {
+      :root {
+        --bg: light-dark(var(--bg-light), var(--bg-dark));
+        --surface: light-dark(var(--surface-light), var(--surface-dark));
+        --surface-2: light-dark(var(--surface-2-light), var(--surface-2-dark));
+        --border: light-dark(var(--border-light), var(--border-dark));
+        --text: light-dark(var(--text-light), var(--text-dark));
+        --muted: light-dark(var(--muted-light), var(--muted-dark));
+        --accent: light-dark(var(--accent-light), var(--accent-dark));
+        --accent-text: light-dark(var(--accent-text-light), var(--accent-text-dark));
+        --ok-bg: light-dark(var(--ok-bg-light), var(--ok-bg-dark));
+        --ok-text: light-dark(var(--ok-text-light), var(--ok-text-dark));
+        --warn-bg: light-dark(var(--warn-bg-light), var(--warn-bg-dark));
+        --warn-text: light-dark(var(--warn-text-light), var(--warn-text-dark));
+        --err-bg: light-dark(var(--err-bg-light), var(--err-bg-dark));
+        --err-text: light-dark(var(--err-text-light), var(--err-text-dark));
+        --neutral-bg: light-dark(var(--neutral-bg-light), var(--neutral-bg-dark));
+        --neutral-text: light-dark(var(--neutral-text-light), var(--neutral-text-dark));
+        --scroll-track: light-dark(var(--scroll-track-light), var(--scroll-track-dark));
+        --scroll-thumb: light-dark(var(--scroll-thumb-light), var(--scroll-thumb-dark));
+      }
+    }
+
+    @supports not (scrollbar-color: auto) {
+      .table-wrapper {
+        scrollbar-width: auto;
+      }
+      .table-wrapper::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+      }
+      .table-wrapper::-webkit-scrollbar-thumb {
+        background: var(--scroll-thumb);
+        border-radius: 6px;
+      }
+      .table-wrapper::-webkit-scrollbar-track {
+        background: var(--scroll-track);
+      }
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-block-size: 100dvh;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.875em;
+    }
+
+    .tabular {
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Login View */
+    .login-shell {
+      display: grid;
+      place-items: center;
+      min-block-size: 100dvh;
+      padding: 1.5rem;
+    }
+
+    .login-card {
+      inline-size: 100%;
+      max-inline-size: 26rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0.875rem;
+      padding: 2rem;
+      box-shadow: 0 10px 30px rgb(0 0 0 / 0.08);
+    }
+
+    .login-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      margin-block-end: 0.4rem;
+    }
+
+    .brand-dot {
+      inline-size: 0.75rem;
+      block-size: 0.75rem;
+      border-radius: 999px;
+      background: var(--ok-text);
+      flex: none;
+    }
+
+    .login-card h1 {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 700;
+    }
+
+    .login-subtitle {
+      margin: 0 0 1.5rem;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .login-form {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .field {
+      display: grid;
+      gap: 0.4rem;
+    }
+
+    .field label {
+      font-size: 0.88rem;
+      font-weight: 600;
+    }
+
+    .input, .select {
+      inline-size: 100%;
+      padding: 0.6rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      background: var(--surface-2);
+      color: var(--text);
+      font: inherit;
+      font-size: 0.95rem;
+    }
+
+    .input:focus-visible, .select:focus-visible, button:focus-visible, .table-wrapper:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .pw-row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: stretch;
+    }
+
+    .pw-row .input {
+      flex: 1 1 auto;
+    }
+
+    button {
+      font: inherit;
+      cursor: pointer;
+      border-radius: 0.5rem;
+      border: 1px solid transparent;
+      padding: 0.52rem 0.9rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: opacity 0.12s ease;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: var(--accent-text);
+    }
+
+    .btn-secondary {
+      background: var(--surface-2);
+      color: var(--text);
+      border-color: var(--border);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text);
+      border-color: var(--border);
+      padding: 0.45rem 0.75rem;
+    }
+
+    .alert-error {
+      padding: 0.65rem 0.8rem;
+      border-radius: 0.5rem;
+      background: var(--err-bg);
+      color: var(--err-text);
+      font-size: 0.88rem;
+      border: 1px solid currentColor;
+    }
+
+    /* App Shell */
+    .app-shell {
+      max-inline-size: 86rem;
+      margin-inline: auto;
+      padding: 1.25rem 1.25rem 3rem;
+    }
+
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem 1rem;
+      padding-block-end: 1rem;
+      border-block-end: 1px solid var(--border);
+      margin-block-end: 1.25rem;
+    }
+
+    .topbar-left {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.65rem;
+    }
+
+    .topbar-title {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+    }
+
+    .topbar-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      white-space: nowrap;
+      background: var(--neutral-bg);
+      color: var(--neutral-text);
+    }
+
+    .badge-ok { background: var(--ok-bg); color: var(--ok-text); }
+    .badge-warn { background: var(--warn-bg); color: var(--warn-text); }
+    .badge-err { background: var(--err-bg); color: var(--err-text); }
+
+    /* KPI Grid */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(15.5rem, 1fr));
+      gap: 0.9rem;
+      margin-block-end: 1.35rem;
+    }
+
+    .kpi-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1rem 1.1rem;
+      display: grid;
+      gap: 0.35rem;
+    }
+
+    .kpi-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+    }
+
+    .kpi-value {
+      font-size: 1.45rem;
+      font-weight: 700;
+      line-height: 1.2;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .kpi-sub {
+      font-size: 0.84rem;
+      color: var(--muted);
+    }
+
+    .health-bar {
+      display: flex;
+      block-size: 0.45rem;
+      border-radius: 999px;
+      overflow: hidden;
+      background: var(--surface-2);
+      margin-block-start: 0.25rem;
+    }
+
+    .health-bar > span {
+      display: block;
+      block-size: 100%;
+    }
+
+    .seg-ok { background: var(--ok-text); }
+    .seg-warn { background: var(--warn-text); }
+    .seg-untested { background: var(--muted); opacity: 0.45; }
+    .seg-err { background: var(--err-text); }
+
+    /* Tabs */
+    .tablist {
+      display: flex;
+      overflow-x: auto;
+      gap: 0.25rem;
+      border-block-end: 1px solid var(--border);
+      margin-block-end: 1rem;
+      scroll-snap-type: inline proximity;
+    }
+
+    [role="tab"] {
+      flex: none;
+      position: relative;
+      background: transparent;
+      border: 0;
+      border-radius: 0.375rem 0.375rem 0 0;
+      color: var(--muted);
+      padding: 0.65rem 1rem;
+      font-weight: 600;
+      scroll-snap-align: start;
+    }
+
+    [role="tab"]:hover {
+      color: var(--text);
+    }
+
+    [role="tab"][aria-selected="true"] {
+      color: var(--accent);
+    }
+
+    [role="tab"][aria-selected="true"]::after {
+      content: "";
+      position: absolute;
+      inset: auto 0 0;
+      border-block-end: 3px solid var(--accent);
+    }
+
+    /* Keep role="tabpanel" free of padding/border/background for hidden="until-found" compatibility */
+    .panel-inner {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .section-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1rem;
+      display: grid;
+      gap: 0.85rem;
+    }
+
+    .section-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.65rem;
+    }
+
+    .section-title {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .toolbar .input {
+      inline-size: min(16rem, 100%);
+      padding: 0.42rem 0.65rem;
+      font-size: 0.88rem;
+    }
+
+    .toolbar .select {
+      inline-size: auto;
+      padding: 0.42rem 0.65rem;
+      font-size: 0.88rem;
+    }
+
+    .kv-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+      gap: 0.75rem;
+    }
+
+    .kv-item {
+      background: var(--surface-2);
+      border-radius: 0.5rem;
+      padding: 0.65rem 0.8rem;
+      display: grid;
+      gap: 0.15rem;
+    }
+
+    .kv-item dt {
+      font-size: 0.76rem;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .kv-item dd {
+      margin: 0;
+      font-weight: 600;
+      font-size: 0.92rem;
+      overflow-wrap: anywhere;
+    }
+
+    /* Responsive Tables */
+    .table-wrapper {
+      overflow: auto;
+      max-inline-size: 100%;
+      max-block-size: min(560px, 72dvh);
+      border: 1px solid var(--border);
+      border-radius: 0.6rem;
+      container-type: inline-size;
+      background: var(--surface);
+    }
+
+    table {
+      inline-size: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 0.88rem;
+    }
+
+    thead {
+      position: sticky;
+      inset-block-start: 0;
+      z-index: 2;
+      background: var(--surface-2);
+    }
+
+    th, td {
+      padding: 0.55rem 0.75rem;
+      text-align: start;
+      border-block-end: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    thead th {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    tbody th {
+      position: sticky;
+      inset-inline-start: 0;
+      z-index: 1;
+      background: var(--surface);
+      font-weight: 600;
+    }
+
+    tbody tr:hover td, tbody tr:hover th {
+      background: var(--surface-2);
+    }
+
+    .cell-clip {
+      max-inline-size: 20rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .empty-state {
+      padding: 1.75rem 1rem;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .feedback-bar {
+      font-size: 0.86rem;
+      color: var(--muted);
+    }
+
+    @container (width < 640px) {
+      table, thead, tbody, tr, th, td {
+        display: block;
+      }
+
+      thead {
+        display: none;
+      }
+
+      tr {
+        margin-block-end: 0.85rem;
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        overflow: hidden;
+        background: var(--surface);
+      }
+
+      tbody th {
+        position: sticky;
+        inset-block-start: 0;
+        z-index: 2;
+        background: var(--surface-2);
+      }
+
+      td {
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
+
+      .cell-clip {
+        max-inline-size: none;
+        white-space: normal;
+      }
+
+      #proxies-table {
+        --label-2: "Status";
+        --label-3: "Protocol";
+        --label-4: "RTT";
+        --label-5: "OK";
+        --label-6: "Static";
+        --label-7: "Detail";
+      }
+
+      #requests-table {
+        --label-2: "Endpoint";
+        --label-3: "Model";
+        --label-4: "Mode";
+        --label-5: "Status";
+        --label-6: "Duration";
+        --label-7: "Proxy";
+        --label-8: "Error";
+      }
+
+      #models-usage-table {
+        --label-2: "Requests";
+        --label-3: "Success";
+        --label-4: "Errors";
+        --label-5: "Avg Latency";
+        --label-6: "Last Used";
+      }
+
+      #catalog-table {
+        --label-2: "Context";
+        --label-3: "Max Out";
+        --label-4: "Capabilities";
+        --label-5: "Thinking Levels";
+      }
+
+      td:nth-child(2)::before { content: var(--label-2) ": "; font-weight: 700; color: var(--muted); }
+      td:nth-child(3)::before { content: var(--label-3) ": "; font-weight: 700; color: var(--muted); }
+      td:nth-child(4)::before { content: var(--label-4) ": "; font-weight: 700; color: var(--muted); }
+      td:nth-child(5)::before { content: var(--label-5) ": "; font-weight: 700; color: var(--muted); }
+      td:nth-child(6)::before { content: var(--label-6) ": "; font-weight: 700; color: var(--muted); }
+      td:nth-child(7)::before { content: var(--label-7) ": "; font-weight: 700; color: var(--muted); }
+      td:nth-child(8)::before { content: var(--label-8) ": "; font-weight: 700; color: var(--muted); }
+    }
+  </style>
+</head>
+<body>
+  <main id="login-view" class="login-shell" hidden>
+    <section class="login-card" aria-labelledby="login-heading">
+      <div class="login-brand">
+        <span class="brand-dot" aria-hidden="true"></span>
+        <h1 id="login-heading">zero-opencode</h1>
+      </div>
+      <p class="login-subtitle">Sign in to inspect proxy health, routing, and live requests.</p>
+
+      <div id="login-error" class="alert-error" role="alert" hidden></div>
+
+      <form id="login-form" class="login-form" method="post" action="/dashboard/api/login">
+        <div class="field">
+          <label for="username">Username</label>
+          <input
+            class="input"
+            id="username"
+            name="username"
+            type="text"
+            autocomplete="username"
+            spellcheck="false"
+            autocapitalize="none"
+            autocorrect="off"
+            enterkeyhint="next"
+            required
+          >
+        </div>
+
+        <div class="field">
+          <label for="password">Password</label>
+          <div class="pw-row">
+            <input
+              class="input"
+              id="password"
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              enterkeyhint="done"
+              required
+            >
+            <button
+              type="button"
+              id="toggle-pw"
+              class="btn-ghost"
+              aria-pressed="false"
+              aria-label="Show password"
+            >Show</button>
+          </div>
+        </div>
+
+        <button type="submit" id="login-submit" class="btn-primary">Sign In</button>
+      </form>
+    </section>
+  </main>
+
+  <div id="app-view" class="app-shell" hidden>
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 class="topbar-title">
+          <span class="brand-dot" aria-hidden="true"></span>
+          <span>zero-opencode</span>
+        </h1>
+        <span id="chain-badge" class="badge" hidden></span>
+        <span id="last-updated" class="feedback-bar tabular"></span>
+      </div>
+      <div class="topbar-actions">
+        <button type="button" id="auto-refresh-btn" class="btn-secondary" aria-pressed="true">Live: 3s</button>
+        <button type="button" id="refresh-now-btn" class="btn-secondary">Refresh</button>
+        <span id="user-badge" class="badge"></span>
+        <button type="button" id="logout-btn" class="btn-ghost">Sign Out</button>
+      </div>
+    </header>
+
+    <section class="kpi-grid" aria-label="Runtime summary metrics">
+      <article class="kpi-card">
+        <span class="kpi-label">Server &amp; Load</span>
+        <span id="kpi-uptime" class="kpi-value tabular">-</span>
+        <span id="kpi-inflight" class="kpi-sub tabular">-</span>
+      </article>
+      <article class="kpi-card">
+        <span class="kpi-label">Requests &amp; Latency</span>
+        <span id="kpi-requests" class="kpi-value tabular">-</span>
+        <span id="kpi-latency" class="kpi-sub tabular">-</span>
+      </article>
+      <article class="kpi-card">
+        <span class="kpi-label">Proxy Pool Health</span>
+        <span id="kpi-pool-health" class="kpi-value tabular">-</span>
+        <span id="kpi-pool-sub" class="kpi-sub tabular">-</span>
+        <div id="kpi-health-bar" class="health-bar" aria-hidden="true"></div>
+      </article>
+      <article class="kpi-card">
+        <span class="kpi-label">Active Proxy &amp; Failover</span>
+        <span id="kpi-active-proxy" class="kpi-value mono">-</span>
+        <span id="kpi-switches" class="kpi-sub tabular">-</span>
+      </article>
+    </section>
+
+    <div class="tabs">
+      <div class="tablist" focusgroup="tablist nomemory" role="tablist" aria-label="Dashboard sections">
+        <button type="button" role="tab" id="tab-overview" aria-selected="true" focusgroupstart>Overview</button>
+        <button type="button" role="tab" id="tab-proxies" aria-selected="false">Proxies</button>
+        <button type="button" role="tab" id="tab-requests" aria-selected="false">Requests</button>
+        <button type="button" role="tab" id="tab-models" aria-selected="false">Models</button>
+      </div>
+
+      <div id="panel-overview" role="tabpanel" aria-labelledby="tab-overview" tabindex="0">
+        <div class="panel-inner">
+          <section class="section-card" aria-labelledby="cfg-title">
+            <div class="section-header">
+              <h2 id="cfg-title" class="section-title">Runtime Configuration</h2>
+              <span id="overview-tokens" class="badge tabular"></span>
+            </div>
+            <dl id="config-kv" class="kv-grid"></dl>
+          </section>
+
+          <section class="section-card" aria-labelledby="model-usage-caption">
+            <div class="section-header">
+              <h2 class="section-title">Model Usage Breakdown</h2>
+            </div>
+            <div tabindex="0" role="region" aria-labelledby="model-usage-caption" class="table-wrapper">
+              <table id="models-usage-table">
+                <caption id="model-usage-caption" class="sr-only">Model usage summary</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Model</th>
+                    <th scope="col">Requests</th>
+                    <th scope="col">Success</th>
+                    <th scope="col">Errors</th>
+                    <th scope="col">Avg Latency</th>
+                    <th scope="col">Last Used</th>
+                  </tr>
+                </thead>
+                <tbody id="models-usage-body"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div id="panel-proxies" role="tabpanel" aria-labelledby="tab-proxies" hidden>
+        <div class="panel-inner">
+          <section class="section-card" aria-labelledby="proxies-title">
+            <div class="section-header">
+              <h2 id="proxies-title" class="section-title">Proxy Pool Status</h2>
+              <div class="toolbar">
+                <select id="proxy-status-filter" class="select" aria-label="Filter proxies by status">
+                  <option value="all">All statuses</option>
+                  <option value="healthy">Healthy</option>
+                  <option value="cooldown">Cooldown</option>
+                  <option value="untested">Untested</option>
+                  <option value="dead">Dead</option>
+                </select>
+                <input id="proxy-search" class="input" type="search" placeholder="Search host, protocol, error..." aria-label="Search proxies">
+                <button type="button" id="probe-btn" class="btn-secondary">Trigger Probe</button>
+                <button type="button" id="reload-lists-btn" class="btn-primary">Reload Lists</button>
+              </div>
+            </div>
+            <div id="proxy-action-msg" class="feedback-bar" aria-live="polite"></div>
+            <div tabindex="0" role="region" aria-labelledby="proxies-table-caption" class="table-wrapper">
+              <table id="proxies-table">
+                <caption id="proxies-table-caption" class="sr-only">Proxy pool entries</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Proxy</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Protocol</th>
+                    <th scope="col">RTT</th>
+                    <th scope="col">OK</th>
+                    <th scope="col">Static</th>
+                    <th scope="col">Detail</th>
+                  </tr>
+                </thead>
+                <tbody id="proxies-body"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div id="panel-requests" role="tabpanel" aria-labelledby="tab-requests" hidden>
+        <div class="panel-inner">
+          <section class="section-card" aria-labelledby="requests-title">
+            <div class="section-header">
+              <h2 id="requests-title" class="section-title">Recent Requests</h2>
+              <div class="toolbar">
+                <select id="req-status-filter" class="select" aria-label="Filter requests by status class">
+                  <option value="all">All statuses</option>
+                  <option value="2xx">2xx Success</option>
+                  <option value="4xx">4xx Client</option>
+                  <option value="5xx">5xx Server</option>
+                </select>
+                <input id="req-search" class="input" type="search" placeholder="Filter model, path, proxy..." aria-label="Search recent requests">
+              </div>
+            </div>
+            <div tabindex="0" role="region" aria-labelledby="requests-table-caption" class="table-wrapper">
+              <table id="requests-table">
+                <caption id="requests-table-caption" class="sr-only">Recent API requests</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Time</th>
+                    <th scope="col">Endpoint</th>
+                    <th scope="col">Model</th>
+                    <th scope="col">Mode</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Duration</th>
+                    <th scope="col">Proxy</th>
+                    <th scope="col">Error</th>
+                  </tr>
+                </thead>
+                <tbody id="requests-body"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div id="panel-models" role="tabpanel" aria-labelledby="tab-models" hidden>
+        <div class="panel-inner">
+          <section class="section-card" aria-labelledby="catalog-title">
+            <div class="section-header">
+              <h2 id="catalog-title" class="section-title">Cached Free Models</h2>
+              <span id="catalog-count" class="badge tabular"></span>
+            </div>
+            <div tabindex="0" role="region" aria-labelledby="catalog-table-caption" class="table-wrapper">
+              <table id="catalog-table">
+                <caption id="catalog-table-caption" class="sr-only">Cached OpenCode free models</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Model ID</th>
+                    <th scope="col">Context</th>
+                    <th scope="col">Max Out</th>
+                    <th scope="col">Capabilities</th>
+                    <th scope="col">Thinking Levels</th>
+                  </tr>
+                </thead>
+                <tbody id="catalog-body"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script nonce="__CSP_NONCE__">
+    "use strict";
+
+    const state = {
+      authenticated: false,
+      username: "",
+      autoRefresh: true,
+      activeTab: "overview",
+      pollTimer: null,
+      inFlight: false,
+      overview: null,
+      proxiesCache: null,
+    };
+
+    const timeFmt = new Intl.DateTimeFormat(undefined, {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    });
+
+    const el = (id) => document.getElementById(id);
+
+    function clearNode(node) {
+      while (node.firstChild) {
+        node.removeChild(node.firstChild);
+      }
+    }
+
+    function cellText(tag, text, className, titleText) {
+      const node = document.createElement(tag);
+      node.textContent = text;
+      if (className) node.className = className;
+      if (titleText) node.title = titleText;
+      return node;
+    }
+
+    function makeBadge(label, variant) {
+      const span = document.createElement("span");
+      span.className = variant ? `badge badge-${variant}` : "badge";
+      span.textContent = label;
+      return span;
+    }
+
+    function renderEmptyRow(tbody, colSpan, message) {
+      clearNode(tbody);
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = colSpan;
+      td.className = "empty-state";
+      td.textContent = message;
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+    }
+
+    function formatUptime(secs) {
+      const s = Number(secs || 0);
+      const d = Math.floor(s / 86400);
+      const h = Math.floor((s % 86400) / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      const rem = s % 60;
+      if (d > 0) return `${d}d ${h}h ${m}m`;
+      if (h > 0) return `${h}h ${m}m ${rem}s`;
+      if (m > 0) return `${m}m ${rem}s`;
+      return `${rem}s`;
+    }
+
+    async function apiJson(url, opts = {}) {
+      const res = await fetch(url, {
+        credentials: "same-origin",
+        ...opts,
+        headers: {
+          "Accept": "application/json",
+          ...(opts.headers || {}),
+        },
+      });
+      if (res.status === 401) {
+        showLogin("Session expired. Please sign in again.");
+        throw new Error("Unauthorized");
+      }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
+      return data;
+    }
+
+    function showLogin(errorMsg) {
+      state.authenticated = false;
+      stopPolling();
+      el("app-view").hidden = true;
+      el("login-view").hidden = false;
+      const errBox = el("login-error");
+      if (errorMsg) {
+        errBox.textContent = errorMsg;
+        errBox.hidden = false;
+      } else {
+        errBox.textContent = "";
+        errBox.hidden = true;
+      }
+      el("username").focus();
+    }
+
+    function showApp(username) {
+      state.authenticated = true;
+      state.username = username || "admin";
+      el("user-badge").textContent = state.username;
+      el("login-view").hidden = true;
+      el("app-view").hidden = false;
+      startPolling();
+      void refreshAll();
+    }
+
+    function startPolling() {
+      stopPolling();
+      if (!state.autoRefresh || !state.authenticated) return;
+      state.pollTimer = window.setInterval(() => {
+        if (!document.hidden) {
+          void refreshAll();
+        }
+      }, 3000);
+    }
+
+    function stopPolling() {
+      if (state.pollTimer !== null) {
+        window.clearInterval(state.pollTimer);
+        state.pollTimer = null;
+      }
+    }
+
+    async function refreshAll() {
+      if (!state.authenticated || state.inFlight) return;
+      state.inFlight = true;
+      try {
+        const overview = await apiJson("/dashboard/api/overview");
+        state.overview = overview;
+        renderOverview(overview);
+
+        if (state.activeTab === "proxies") {
+          await refreshProxiesTab();
+        } else {
+          renderProxiesTable(overview.proxies || [], overview.proxy_pool);
+        }
+        el("last-updated").textContent = `Updated ${timeFmt.format(new Date())}`;
+      } catch (err) {
+        if (err && err.message !== "Unauthorized") {
+          el("last-updated").textContent = `Error: ${err.message}`;
+        }
+      } finally {
+        state.inFlight = false;
+      }
+    }
+
+    async function refreshProxiesTab() {
+      const status = el("proxy-status-filter").value;
+      const q = el("proxy-search").value.trim();
+      const params = new URLSearchParams({ status, limit: "300" });
+      if (q) params.set("q", q);
+      const data = await apiJson(`/dashboard/api/proxies?${params.toString()}`);
+      state.proxiesCache = data;
+      renderProxiesTable(data.proxies || [], data.stats);
+    }
+
+    function renderOverview(data) {
+      const srv = data.server || {};
+      const cfg = data.config || {};
+      const summary = (data.metrics && data.metrics.summary) || {};
+      const pool = data.proxy_pool;
+
+      // Chain badge
+      const chainBadge = el("chain-badge");
+      if (cfg.chain_proxy) {
+        chainBadge.textContent = `Chained via ${cfg.chain_proxy}`;
+        chainBadge.className = pool && pool.hop1_healthy === false ? "badge badge-err" : "badge badge-ok";
+        chainBadge.hidden = false;
+      } else {
+        chainBadge.hidden = true;
+      }
+
+      // KPI 1: Server & Load
+      el("kpi-uptime").textContent = formatUptime(srv.uptime_secs);
+      el("kpi-inflight").textContent = `In-flight: ${summary.in_flight_requests || 0} | Cached models: ${(data.models || []).length}`;
+
+      // KPI 2: Requests & Latency
+      const totalReq = summary.total_requests || 0;
+      const okReq = summary.success_requests || 0;
+      const okRate = totalReq > 0 ? `${Math.round((okReq * 100) / totalReq)}% ok` : "No requests yet";
+      el("kpi-requests").textContent = `${totalReq} (${okRate})`;
+      el("kpi-latency").textContent = `Avg ${summary.avg_latency_ms || 0} ms | Chat ${summary.chat_requests || 0} (SSE ${summary.streaming_requests || 0})`;
+
+      // KPI 3: Proxy Pool Health
+      const bar = el("kpi-health-bar");
+      clearNode(bar);
+      if (!pool) {
+        el("kpi-pool-health").textContent = "Disabled";
+        el("kpi-pool-sub").textContent = cfg.chain_proxy ? `Single proxy: ${cfg.chain_proxy}` : "Direct connection";
+      } else {
+        el("kpi-pool-health").textContent = `${pool.healthy} / ${pool.total} healthy`;
+        const resetPart = pool.earliest_cooldown_secs !== null && pool.earliest_cooldown_secs !== undefined
+          ? ` | Next reset ${pool.earliest_cooldown_secs}s`
+          : "";
+        el("kpi-pool-sub").textContent = `Cooldown ${pool.cooldown} | Untested ${pool.untested} | Dead ${pool.dead}${resetPart}`;
+        for (const [count, cls] of [
+          [pool.healthy, "seg-ok"],
+          [pool.cooldown, "seg-warn"],
+          [pool.untested, "seg-untested"],
+          [pool.dead, "seg-err"],
+        ]) {
+          if (count > 0) {
+            const seg = document.createElement("span");
+            seg.className = cls;
+            seg.style.flexGrow = String(count);
+            bar.appendChild(seg);
+          }
+        }
+      }
+
+      // KPI 4: Active Proxy & Failover
+      if (!pool) {
+        el("kpi-active-proxy").textContent = cfg.chain_proxy || "Direct";
+        el("kpi-switches").textContent = "Pool rotation disabled";
+      } else {
+        el("kpi-active-proxy").textContent = pool.active_proxy || "None selected";
+        const rttText = pool.active_rtt_ms !== null && pool.active_rtt_ms !== undefined ? `${pool.active_rtt_ms} ms` : "-";
+        el("kpi-switches").textContent = `RTT ${rttText} | Switches ${pool.switches_total} | Hedged wins ${pool.hedged_wins}`;
+      }
+
+      // Overview Tokens & Config KV
+      el("overview-tokens").textContent = `Tokens: ${summary.total_tokens || 0} (in ${summary.prompt_tokens || 0} / out ${summary.completion_tokens || 0})`;
+      const dash = data.dashboard || {};
+      const dashMode = dash.separate_listener ? "dedicated" : "shared";
+      const kv = el("config-kv");
+      clearNode(kv);
+      const kvPairs = [
+        ["API Listen", `${srv.host || "127.0.0.1"}:${srv.port || 8080}`],
+        ["Dashboard Listen", dash.host ? `${dash.host}:${dash.port} (${dashMode})` : "shared"],
+        ["API Auth", srv.api_auth_enabled ? "Bearer token required" : "Public"],
+        ["Base / Chain Proxy", cfg.chain_proxy || "None (direct)"],
+        ["Pool Strategy", cfg.strategy || "-"],
+        ["Target Healthy", String(cfg.target_healthy ?? "-")],
+        ["Hedge Delay", cfg.hedge_delay_ms ? `${cfg.hedge_delay_ms} ms` : "Disabled"],
+        ["Failover Timeout", cfg.failover_timeout_secs ? `${cfg.failover_timeout_secs} s` : "Until disconnect"],
+        ["Fallback to Base", cfg.fallback_to_base ? "Enabled" : "Strict (503)"],
+      ];
+      for (const [k, v] of kvPairs) {
+        const box = document.createElement("div");
+        box.className = "kv-item";
+        box.appendChild(cellText("dt", k));
+        box.appendChild(cellText("dd", v, "mono"));
+        kv.appendChild(box);
+      }
+
+      renderModelUsageTable((data.metrics && data.metrics.models) || []);
+      renderRequestsTable((data.metrics && data.metrics.recent_requests) || []);
+      renderCatalogTable(data.models || []);
+    }
+
+    function renderModelUsageTable(models) {
+      const tbody = el("models-usage-body");
+      if (!models.length) {
+        renderEmptyRow(tbody, 6, "No chat model requests recorded yet.");
+        return;
+      }
+      clearNode(tbody);
+      for (const m of models) {
+        const tr = document.createElement("tr");
+        tr.appendChild(cellText("th", m.model, "mono cell-clip", m.model));
+        tr.appendChild(cellText("td", String(m.requests), "tabular"));
+        tr.appendChild(cellText("td", String(m.successes), "tabular"));
+        tr.appendChild(cellText("td", String(m.errors), "tabular"));
+        tr.appendChild(cellText("td", `${m.avg_latency_ms} ms`, "tabular"));
+        tr.appendChild(cellText("td", m.last_used_ms ? timeFmt.format(new Date(m.last_used_ms)) : "-", "tabular"));
+        tbody.appendChild(tr);
+      }
+    }
+
+    function statusBadgeForProxy(status) {
+      if (status === "healthy") return makeBadge("healthy", "ok");
+      if (status && status.startsWith("cooldown")) return makeBadge(status, "warn");
+      if (status === "dead") return makeBadge("dead", "err");
+      return makeBadge(status || "untested", "");
+    }
+
+    function renderProxiesTable(proxies, poolStats) {
+      const tbody = el("proxies-body");
+      if (!poolStats) {
+        renderEmptyRow(tbody, 7, "Proxy pool is disabled in configuration.");
+        return;
+      }
+      const statusFilter = el("proxy-status-filter").value;
+      const query = el("proxy-search").value.trim().toLowerCase();
+      const filtered = proxies.filter((p) => {
+        if (statusFilter === "healthy" && p.status !== "healthy") return false;
+        if (statusFilter === "cooldown" && !(p.status || "").startsWith("cooldown")) return false;
+        if (statusFilter === "untested" && p.status !== "untested") return false;
+        if (statusFilter === "dead" && p.status !== "dead") return false;
+        if (query) {
+          const hay = `${p.proxy} ${p.protocol} ${p.status} ${p.last_error || ""}`.toLowerCase();
+          if (!hay.includes(query)) return false;
+        }
+        return true;
+      });
+
+      if (!filtered.length) {
+        renderEmptyRow(tbody, 7, "No proxies match the current filter.");
+        return;
+      }
+
+      clearNode(tbody);
+      for (const p of filtered) {
+        const tr = document.createElement("tr");
+        tr.appendChild(cellText("th", p.proxy, "mono cell-clip", p.proxy));
+        const tdStatus = document.createElement("td");
+        tdStatus.appendChild(statusBadgeForProxy(p.status));
+        tr.appendChild(tdStatus);
+        tr.appendChild(cellText("td", p.protocol, "mono"));
+        const rtt = p.ewma_rtt_ms ?? p.rtt_ms;
+        tr.appendChild(cellText("td", rtt !== null && rtt !== undefined ? `${rtt} ms` : "-", "tabular"));
+        tr.appendChild(cellText("td", String(p.ok_count || 0), "tabular"));
+        tr.appendChild(cellText("td", p.is_static ? "yes" : "no"));
+        const parts = [];
+        if (p.cooldown_remaining_secs !== null && p.cooldown_remaining_secs !== undefined) {
+          parts.push(`reset ${p.cooldown_remaining_secs}s`);
+        }
+        if (p.last_error) parts.push(p.last_error);
+        const detail = parts.join(" | ") || "-";
+        tr.appendChild(cellText("td", detail, "cell-clip", detail));
+        tbody.appendChild(tr);
+      }
+    }
+
+    function renderRequestsTable(requests) {
+      const tbody = el("requests-body");
+      const statusFilter = el("req-status-filter").value;
+      const query = el("req-search").value.trim().toLowerCase();
+
+      const filtered = requests.filter((r) => {
+        if (statusFilter === "2xx" && (r.status < 200 || r.status >= 300)) return false;
+        if (statusFilter === "4xx" && (r.status < 400 || r.status >= 500)) return false;
+        if (statusFilter === "5xx" && r.status < 500) return false;
+        if (query) {
+          const hay = `${r.path} ${r.model || ""} ${r.proxy || ""} ${r.error || ""}`.toLowerCase();
+          if (!hay.includes(query)) return false;
+        }
+        return true;
+      });
+
+      if (!filtered.length) {
+        renderEmptyRow(tbody, 8, "No recorded API requests match the current filter.");
+        return;
+      }
+
+      clearNode(tbody);
+      for (const r of filtered) {
+        const tr = document.createElement("tr");
+        tr.appendChild(cellText("th", timeFmt.format(new Date(r.timestamp_ms)), "tabular"));
+        tr.appendChild(cellText("td", `${r.method} ${r.path}`, "mono cell-clip", r.path));
+        tr.appendChild(cellText("td", r.model || "-", "mono cell-clip", r.model || ""));
+        const mode = r.stream === true ? "SSE" : r.stream === false ? "JSON" : "-";
+        tr.appendChild(cellText("td", mode));
+
+        const tdStatus = document.createElement("td");
+        const variant = r.status >= 500 ? "err" : r.status >= 400 ? "warn" : "ok";
+        tdStatus.appendChild(makeBadge(String(r.status), variant));
+        tr.appendChild(tdStatus);
+
+        tr.appendChild(cellText("td", `${r.duration_ms} ms`, "tabular"));
+        tr.appendChild(cellText("td", r.proxy || "direct", "mono cell-clip", r.proxy || "direct"));
+        tr.appendChild(cellText("td", r.error || "-", "cell-clip", r.error || ""));
+        tbody.appendChild(tr);
+      }
+    }
+
+    function renderCatalogTable(models) {
+      el("catalog-count").textContent = `${models.length} cached`;
+      const tbody = el("catalog-body");
+      if (!models.length) {
+        renderEmptyRow(tbody, 5, "Model catalog cache is empty (populated on first /v1/models or chat request).");
+        return;
+      }
+      clearNode(tbody);
+      for (const m of models) {
+        const tr = document.createElement("tr");
+        tr.appendChild(cellText("th", m.id, "mono cell-clip", m.id));
+        tr.appendChild(cellText("td", m.context_window ? String(m.context_window) : "-", "tabular"));
+        tr.appendChild(cellText("td", m.max_output ? String(m.max_output) : "-", "tabular"));
+        tr.appendChild(cellText("td", m.capabilities || "text"));
+        const levels = Array.isArray(m.thinking_levels) && m.thinking_levels.length
+          ? m.thinking_levels.join(", ")
+          : "-";
+        tr.appendChild(cellText("td", levels, "mono cell-clip", levels));
+        tbody.appendChild(tr);
+      }
+    }
+
+    function selectTab(tabName) {
+      state.activeTab = tabName;
+      const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
+      for (const tab of tabs) {
+        const key = tab.id.replace(/^tab-/, "");
+        const selected = key === tabName;
+        tab.setAttribute("aria-selected", selected ? "true" : "false");
+        tab.toggleAttribute("focusgroupstart", selected);
+        const panel = el(`panel-${key}`);
+        if (panel) {
+          panel.hidden = !selected;
+          if (selected) {
+            panel.setAttribute("tabindex", "0");
+          } else {
+            panel.removeAttribute("tabindex");
+          }
+        }
+        if (selected) {
+          tab.scrollIntoView({ block: "nearest", inline: "nearest" });
+        }
+      }
+      if (tabName === "proxies" && state.authenticated) {
+        void refreshProxiesTab();
+      }
+    }
+
+    function wireEvents() {
+      el("toggle-pw").addEventListener("click", () => {
+        const pw = el("password");
+        const btn = el("toggle-pw");
+        const showing = pw.type === "text";
+        pw.type = showing ? "password" : "text";
+        btn.setAttribute("aria-pressed", showing ? "false" : "true");
+        btn.textContent = showing ? "Show" : "Hide";
+        btn.setAttribute("aria-label", showing ? "Show password" : "Hide password");
+      });
+
+      el("login-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const errBox = el("login-error");
+        const submitBtn = el("login-submit");
+        errBox.hidden = true;
+        submitBtn.disabled = true;
+        try {
+          const username = el("username").value;
+          const password = el("password").value;
+          const res = await fetch("/dashboard/api/login", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json", "Accept": "application/json" },
+            body: JSON.stringify({ username, password }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            errBox.textContent = data.error || "Invalid credentials";
+            errBox.hidden = false;
+            return;
+          }
+          el("password").value = "";
+          showApp(data.username || username);
+        } catch (err) {
+          errBox.textContent = err ? err.message : "Login failed";
+          errBox.hidden = false;
+        } finally {
+          submitBtn.disabled = false;
+        }
+      });
+
+      el("logout-btn").addEventListener("click", async () => {
+        try {
+          await fetch("/dashboard/api/logout", { method: "POST", credentials: "same-origin" });
+        } finally {
+          showLogin("");
+        }
+      });
+
+      el("refresh-now-btn").addEventListener("click", () => {
+        void refreshAll();
+      });
+
+      el("auto-refresh-btn").addEventListener("click", () => {
+        state.autoRefresh = !state.autoRefresh;
+        const btn = el("auto-refresh-btn");
+        btn.setAttribute("aria-pressed", state.autoRefresh ? "true" : "false");
+        btn.textContent = state.autoRefresh ? "Live: 3s" : "Paused";
+        if (state.autoRefresh) {
+          startPolling();
+          void refreshAll();
+        } else {
+          stopPolling();
+        }
+      });
+
+      const tabButtons = Array.from(document.querySelectorAll('[role="tab"]'));
+      for (const tab of tabButtons) {
+        tab.addEventListener("click", () => {
+          selectTab(tab.id.replace(/^tab-/, ""));
+        });
+        tab.addEventListener("keydown", (e) => {
+          const idx = tabButtons.indexOf(tab);
+          let nextIdx = -1;
+          if (e.key === "ArrowRight") nextIdx = (idx + 1) % tabButtons.length;
+          else if (e.key === "ArrowLeft") nextIdx = (idx - 1 + tabButtons.length) % tabButtons.length;
+          else if (e.key === "Home") nextIdx = 0;
+          else if (e.key === "End") nextIdx = tabButtons.length - 1;
+          if (nextIdx >= 0) {
+            e.preventDefault();
+            const nextTab = tabButtons[nextIdx];
+            nextTab.focus();
+            selectTab(nextTab.id.replace(/^tab-/, ""));
+          }
+        });
+      }
+
+      el("proxy-status-filter").addEventListener("change", () => {
+        void refreshProxiesTab();
+      });
+      el("proxy-search").addEventListener("input", () => {
+        if (state.proxiesCache) {
+          renderProxiesTable(state.proxiesCache.proxies || [], state.proxiesCache.stats);
+        } else if (state.overview) {
+          renderProxiesTable(state.overview.proxies || [], state.overview.proxy_pool);
+        }
+      });
+
+      el("req-status-filter").addEventListener("change", () => {
+        if (state.overview && state.overview.metrics) {
+          renderRequestsTable(state.overview.metrics.recent_requests || []);
+        }
+      });
+      el("req-search").addEventListener("input", () => {
+        if (state.overview && state.overview.metrics) {
+          renderRequestsTable(state.overview.metrics.recent_requests || []);
+        }
+      });
+
+      el("probe-btn").addEventListener("click", async () => {
+        const msg = el("proxy-action-msg");
+        const btn = el("probe-btn");
+        btn.disabled = true;
+        msg.textContent = "Triggering two-stage probe wave...";
+        try {
+          const data = await apiJson("/dashboard/api/proxies/probe", { method: "POST" });
+          msg.textContent = data.message || "Probe triggered";
+          await refreshProxiesTab();
+        } catch (err) {
+          msg.textContent = `Probe failed: ${err.message}`;
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+      el("reload-lists-btn").addEventListener("click", async () => {
+        const msg = el("proxy-action-msg");
+        const btn = el("reload-lists-btn");
+        btn.disabled = true;
+        msg.textContent = "Fetching proxy list URLs...";
+        try {
+          const data = await apiJson("/dashboard/api/proxies/refresh", { method: "POST" });
+          const r = data.replace || {};
+          msg.textContent = r.aborted_empty
+            ? "Refresh yielded 0 usable proxies; kept previous list."
+            : `Reloaded: total=${r.total || 0}, kept=${r.kept || 0}, added=${r.added || 0}, removed=${r.removed || 0}`;
+          await refreshAll();
+        } catch (err) {
+          msg.textContent = `Reload failed: ${err.message}`;
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    }
+
+    async function boot() {
+      wireEvents();
+      try {
+        const res = await fetch("/dashboard/api/session", { credentials: "same-origin" });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.authenticated) {
+          showApp(data.username);
+        } else {
+          showLogin("");
+        }
+      } catch {
+        showLogin("");
+      }
+    }
+
+    boot();
+  </script>
+</body>
+</html>

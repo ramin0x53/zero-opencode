@@ -566,6 +566,15 @@ impl ModelCatalog {
             .unwrap_or(0)
     }
 
+    /// Non-blocking snapshot of currently cached free models for the dashboard.
+    pub fn cached_snapshot(&self) -> Vec<FreeModel> {
+        self.cache
+            .try_read()
+            .ok()
+            .and_then(|g| g.as_ref().map(|c| c.models.clone()))
+            .unwrap_or_default()
+    }
+
     async fn fetch_fresh(&self) -> anyhow::Result<Vec<FreeModel>> {
         if let Some(route) = &self.pool_route {
             let mut excluded: HashSet<ProxyId> = HashSet::new();
