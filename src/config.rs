@@ -100,7 +100,6 @@ pub struct ProxyPoolConfig {
     pub sources: ProxySourcesConfig,
     pub static_proxies: Vec<String>,
     pub refresh_interval_secs: u64,
-    pub max_proxies: Option<usize>,
     pub allow_private_proxies: bool,
     pub health_check: ProxyHealthCheckConfig,
     pub selection: ProxySelectionConfig,
@@ -113,7 +112,6 @@ impl Default for ProxyPoolConfig {
             sources: ProxySourcesConfig::default(),
             static_proxies: Vec::new(),
             refresh_interval_secs: 900,
-            max_proxies: Some(2000),
             allow_private_proxies: false,
             health_check: ProxyHealthCheckConfig::default(),
             selection: ProxySelectionConfig::default(),
@@ -423,9 +421,6 @@ impl AppConfig {
         if pool.refresh_interval_secs == 0 {
             bail!("opencode.proxy_pool.refresh_interval_secs must be greater than 0");
         }
-        if pool.max_proxies == Some(0) {
-            bail!("opencode.proxy_pool.max_proxies must be null or greater than 0");
-        }
         let hc = &pool.health_check;
         if hc.concurrency == 0 {
             bail!("opencode.proxy_pool.health_check.concurrency must be at least 1");
@@ -545,7 +540,6 @@ opencode:
       http: ["https://example.com/http.txt"]
     static_proxies:
       - "socks5h://user:pass@10.0.0.2:1080"
-    max_proxies: null
     selection:
       strategy: "round_robin"
       failover_timeout_secs: null
@@ -555,7 +549,6 @@ opencode:
         let pp = &cfg.opencode.proxy_pool;
         assert!(pp.enabled);
         assert_eq!(pp.sources.socks5, vec!["https://example.com/socks5.txt"]);
-        assert_eq!(pp.max_proxies, None);
         assert_eq!(pp.selection.strategy, ProxyStrategy::RoundRobin);
         assert_eq!(pp.selection.failover_timeout_secs, None);
         assert_eq!(pp.selection.hedge_delay_ms, None);
@@ -582,10 +575,17 @@ opencode:
             )
             .is_err()
         );
-        // zero limits / timeouts
+        // unknown removed field max_proxies
         assert!(
             AppConfig::from_yaml_str(
-                "opencode:\n  proxy_pool:\n    max_proxies: 0\n"
+                "opencode:\n  proxy_pool:\n    max_proxies: 2000\n"
+            )
+            .is_err()
+        );
+        // zero intervals / timeouts
+        assert!(
+            AppConfig::from_yaml_str(
+                "opencode:\n  proxy_pool:\n    refresh_interval_secs: 0\n"
             )
             .is_err()
         );

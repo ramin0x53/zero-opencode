@@ -92,7 +92,6 @@ opencode:
       mixed: []              # URLs where each line/item carries an explicit scheme
     static_proxies: []       # Optional inline proxy URLs (scheme://[user:pass@]host:port)
     refresh_interval_secs: 900
-    max_proxies: 2000        # Cap unique candidates in memory (null = unlimited)
     allow_private_proxies: false
     health_check:
       concurrency: 25

@@ -96,7 +96,7 @@ async fn fetch_one_source(
 
 /// Fetch all configured proxy source URLs concurrently using `base_client` (which
 /// automatically tunnels through `opencode.proxy` when configured), merge with
-/// `static_proxies`, deduplicate, shuffle remote entries, and apply `max_proxies`.
+/// `static_proxies`, deduplicate, and shuffle remote entries.
 pub async fn fetch_all_proxies(
     base_client: &Client,
     cfg: &ProxyPoolConfig,
@@ -162,7 +162,7 @@ pub async fn fetch_all_proxies(
         .filter(|item| !static_keys.contains(&item.key()))
         .collect();
 
-    // Shuffle remote candidates so every source has equal representation before capping.
+    // Shuffle remote candidates so every source has equal representation during probing.
     if remote_items.len() > 1 {
         for i in (1..remote_items.len()).rev() {
             let j = rand::random_range(0..=i);
@@ -171,14 +171,8 @@ pub async fn fetch_all_proxies(
     }
 
     let mut proxies = Vec::with_capacity(static_items.len() + remote_items.len());
-    proxies.extend(static_items.iter().cloned());
-
-    if let Some(cap) = cfg.max_proxies {
-        let remaining = cap.saturating_sub(proxies.len());
-        proxies.extend(remote_items.into_iter().take(remaining));
-    } else {
-        proxies.extend(remote_items);
-    }
+    proxies.extend(static_items);
+    proxies.extend(remote_items);
 
     let static_count = proxies.iter().filter(|p| p.is_static).count();
     let remote_count = proxies.len().saturating_sub(static_count);
@@ -230,7 +224,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn fetches_deduplicates_filters_private_and_caps_while_tolerating_failures() {
+    async fn fetches_deduplicates_filters_private_and_keeps_all_while_tolerating_failures() {
         let base = spawn_mock_sources_server().await;
         let client = build_opencode_client(None, 10).unwrap();
 
@@ -243,7 +237,6 @@ mod tests {
                 mixed: vec![format!("{base}/mixed.json")],
             },
             static_proxies: vec!["socks5://127.0.0.1:9999".to_string()],
-            max_proxies: Some(4),
             allow_private_proxies: false,
             ..Default::default()
         };
@@ -253,10 +246,11 @@ mod tests {
         assert_eq!(result.sources_succeeded, 3);
         assert_eq!(result.sources_failed, 1);
         assert_eq!(result.static_count, 1);
-        // 1 static (127.0.0.1:9999) + up to 3 remote out of 4 unique public endpoints:
+        assert_eq!(result.remote_count, 5);
+        // 1 static (127.0.0.1:9999) + all 5 unique public remote endpoints:
         // socks5h://1.1.1.1:1080, socks5h://2.2.2.2:1080, socks4a://3.3.3.3:4145,
-        // socks4a://1.1.1.1:1080, http://4.4.4.4:8080 => 5 remote unique -> capped to 3
-        assert_eq!(result.proxies.len(), 4);
+        // socks4a://1.1.1.1:1080, http://4.4.4.4:8080
+        assert_eq!(result.proxies.len(), 6);
         assert_eq!(result.proxies[0].host, "127.0.0.1");
         assert!(result.proxies[0].is_static);
         // Remote 127.0.0.1:1080 was filtered out
