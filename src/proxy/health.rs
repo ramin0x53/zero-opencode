@@ -553,7 +553,7 @@ pub fn spawn_background_tasks(
         })
     };
 
-    // 3. Periodic source list refresher (replaces old list in memory)
+    // 3. Periodic source list refresher (replaces Untested/Dead entries, keeping Healthy/Cooldown)
     let refresher_handle = {
         let pool = Arc::clone(&pool);
         let base_client = base_client.clone();

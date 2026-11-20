@@ -155,9 +155,9 @@ impl ProxyPool {
         self.bridge.as_ref()
     }
 
-    /// Replace the in-memory proxy list with `new_list`, dropping removed entries,
-    /// carrying over existing health/cooldown state for overlapping proxies, and adding
-    /// newly discovered proxies as `Untested`.
+    /// Refresh the in-memory proxy list with `new_list`, replacing all `Untested` and `Dead`
+    /// entries while preserving existing `Healthy` and `Cooldown` proxies (even if absent from
+    /// `new_list`), and adding new unique proxies from `new_list` as `Untested`.
     pub fn replace_proxies(&self, new_list: Vec<ParsedProxy>) -> ReplaceSummary {
         let (summary, endpoints_for_bridge, should_probe, has_healthy) = {
             let mut guard = self.inner.lock().expect("ProxyPool lock");
@@ -172,30 +172,50 @@ impl ProxyPool {
                 };
             }
 
-            let mut old_entries = std::mem::take(&mut guard.entries);
-            let old_key_to_id = std::mem::take(&mut guard.key_to_id);
-            guard.order.clear();
+            promote_expired_cooldowns(&mut guard, Instant::now());
 
-            let mut new_entries = HashMap::with_capacity(new_list.len());
-            let mut new_key_to_id = HashMap::with_capacity(new_list.len());
-            let mut new_order = Vec::with_capacity(new_list.len());
+            let mut old_entries = std::mem::take(&mut guard.entries);
+            let _old_key_to_id = std::mem::take(&mut guard.key_to_id);
+            let old_order = std::mem::take(&mut guard.order);
+
+            let cap = old_entries.len().max(new_list.len());
+            let mut new_entries = HashMap::with_capacity(cap);
+            let mut new_key_to_id = HashMap::with_capacity(cap);
+            let mut new_order = Vec::with_capacity(cap);
             let mut kept = 0usize;
             let mut added = 0usize;
+            let mut removed = 0usize;
 
+            // Pass 1: preserve Healthy and Cooldown entries; drop Untested and Dead entries.
+            for old_id in old_order {
+                if let Some(entry) = old_entries.remove(&old_id) {
+                    if matches!(
+                        entry.state,
+                        ProxyState::Healthy { .. } | ProxyState::Cooldown { .. }
+                    ) {
+                        new_key_to_id.insert(entry.endpoint.key(), old_id);
+                        new_order.push(old_id);
+                        new_entries.insert(old_id, entry);
+                        kept += 1;
+                    } else {
+                        removed += 1;
+                    }
+                }
+            }
+            removed += old_entries.len();
+
+            // Pass 2: add unique entries from new_list as Untested unless already kept above.
+            let mut seen_new_keys = HashSet::with_capacity(new_list.len());
             for parsed in new_list {
                 let key = parsed.key();
-                if new_key_to_id.contains_key(&key) {
+                if !seen_new_keys.insert(key.clone()) {
                     continue;
                 }
-                if let Some(&existing_id) = old_key_to_id.get(&key)
-                    && let Some(mut existing) = old_entries.remove(&existing_id)
-                {
-                    existing.endpoint.is_static = parsed.is_static;
-                    existing.endpoint.auth = parsed.auth;
-                    new_key_to_id.insert(key, existing_id);
-                    new_order.push(existing_id);
-                    new_entries.insert(existing_id, existing);
-                    kept += 1;
+                if let Some(&existing_id) = new_key_to_id.get(&key) {
+                    if let Some(existing) = new_entries.get_mut(&existing_id) {
+                        existing.endpoint.is_static = parsed.is_static;
+                        existing.endpoint.auth = parsed.auth;
+                    }
                     continue;
                 }
 
@@ -217,7 +237,6 @@ impl ProxyPool {
                 added += 1;
             }
 
-            let removed = old_entries.len();
             guard.entries = new_entries;
             guard.key_to_id = new_key_to_id;
             guard.order = new_order;
@@ -1061,7 +1080,81 @@ mod tests {
     }
 
     #[test]
-    fn full_replace_drops_missing_carries_over_state_and_guards_empty_refresh() {
+    fn refresh_replaces_untested_and_dead_while_preserving_healthy_and_cooldown() {
+        let cfg = ProxyPoolConfig {
+            enabled: true,
+            ..Default::default()
+        };
+        let pool = ProxyPool::new(
+            cfg,
+            vec![
+                p("socks5://1.1.1.1:1080"),
+                p("socks5://2.2.2.2:1080"),
+                p("socks5://3.3.3.3:1080"),
+                p("socks5://4.4.4.4:1080"),
+                p("socks5://5.5.5.5:1080"),
+                p("socks5://6.6.6.6:1080"),
+                p("socks5://7.7.7.7:1080"),
+            ],
+            None,
+        );
+        pool.report_success(ProxyId(1), 40);
+        assert_eq!(pool.select_proxy(&HashSet::new()).unwrap().id, ProxyId(1));
+        pool.report_rate_limited(ProxyId(2), Some(Duration::from_secs(600)), "429");
+        pool.report_rate_limited(ProxyId(3), Some(Duration::from_secs(600)), "429");
+        pool.report_dead(ProxyId(4), "dead");
+        pool.report_dead(ProxyId(5), "dead");
+        // 6.6.6.6 and 7.7.7.7 remain Untested
+
+        // Outage guard: empty refresh does NOT wipe pool
+        let empty_res = pool.replace_proxies(vec![]);
+        assert!(empty_res.aborted_empty);
+        assert_eq!(pool.stats().total, 7);
+
+        // Refresh with: 2.2.2.2 (kept Cooldown), 4.4.4.4 (was Dead -> replaced),
+        // 7.7.7.7 (was Untested -> replaced), 8.8.8.8 (new).
+        // Absent: 1.1.1.1 (kept Healthy), 3.3.3.3 (kept Cooldown),
+        // 5.5.5.5 (Dead -> removed), 6.6.6.6 (Untested -> removed).
+        let rep = pool.replace_proxies(vec![
+            p("socks5://2.2.2.2:1080"),
+            p("socks5://4.4.4.4:1080"),
+            p("socks5://7.7.7.7:1080"),
+            p("http://8.8.8.8:8080"),
+        ]);
+        assert!(!rep.aborted_empty);
+        assert_eq!(rep.kept, 3);
+        assert_eq!(rep.removed, 4);
+        assert_eq!(rep.added, 3);
+        assert_eq!(rep.total, 6);
+
+        let stats = pool.stats();
+        assert_eq!(stats.healthy, 1);
+        assert_eq!(stats.cooldown, 2);
+        assert_eq!(stats.untested, 3);
+        assert_eq!(stats.dead, 0);
+        assert_eq!(stats.active_proxy.as_deref(), Some("socks5://1.1.1.1:1080"));
+        assert_eq!(pool.select_proxy(&HashSet::new()).unwrap().id, ProxyId(1));
+
+        let snap = pool.snapshot_proxies(20);
+        assert_eq!(snap.len(), 6);
+        let status_by_proxy: HashMap<&str, &str> =
+            snap.iter().map(|i| (i.proxy.as_str(), i.status)).collect();
+        assert_eq!(status_by_proxy.get("socks5://1.1.1.1:1080"), Some(&"healthy"));
+        assert_eq!(
+            status_by_proxy.get("socks5://2.2.2.2:1080"),
+            Some(&"cooldown:rate_limited")
+        );
+        assert_eq!(
+            status_by_proxy.get("socks5://3.3.3.3:1080"),
+            Some(&"cooldown:rate_limited")
+        );
+        assert_eq!(status_by_proxy.get("socks5://4.4.4.4:1080"), Some(&"untested"));
+        assert_eq!(status_by_proxy.get("socks5://7.7.7.7:1080"), Some(&"untested"));
+        assert_eq!(status_by_proxy.get("http://8.8.8.8:8080"), Some(&"untested"));
+    }
+
+    #[test]
+    fn refresh_promotes_expired_cooldowns_before_replacing() {
         let cfg = ProxyPoolConfig {
             enabled: true,
             ..Default::default()
@@ -1075,32 +1168,30 @@ mod tests {
             ],
             None,
         );
-        pool.report_success(ProxyId(1), 40);
-        pool.report_rate_limited(ProxyId(2), Some(Duration::from_secs(600)), "429");
-        pool.report_dead(ProxyId(3), "dead");
-        assert_eq!(pool.select_proxy(&HashSet::new()).unwrap().id, ProxyId(1));
+        pool.report_success(ProxyId(1), 30);
+        pool.report_overloaded(ProxyId(1));
+        {
+            let mut guard = pool.inner.lock().expect("ProxyPool lock");
+            if let Some(entry) = guard.entries.get_mut(&ProxyId(1))
+                && let ProxyState::Cooldown { until, .. } = &mut entry.state
+            {
+                *until = Instant::now() - Duration::from_secs(1);
+            }
+        }
+        pool.report_rate_limited(ProxyId(2), Some(Duration::from_millis(0)), "429");
 
-        // Outage guard: empty refresh does NOT wipe pool
-        let empty_res = pool.replace_proxies(vec![]);
-        assert!(empty_res.aborted_empty);
-        assert_eq!(pool.stats().total, 3);
-
-        // Replace with overlap on 2.2.2.2 (cooldown carried) + new 4.4.4.4, dropping 1.1.1.1 & 3.3.3.3
-        let rep = pool.replace_proxies(vec![
-            p("socks5://2.2.2.2:1080"),
-            p("http://4.4.4.4:8080"),
-        ]);
+        let rep = pool.replace_proxies(vec![p("socks5://3.3.3.3:1080")]);
         assert!(!rep.aborted_empty);
-        assert_eq!(rep.total, 2);
         assert_eq!(rep.kept, 1);
-        assert_eq!(rep.added, 1);
         assert_eq!(rep.removed, 2);
+        assert_eq!(rep.added, 1);
+        assert_eq!(rep.total, 2);
 
         let stats = pool.stats();
-        assert_eq!(stats.healthy, 0);
-        assert_eq!(stats.cooldown, 1);
+        assert_eq!(stats.healthy, 1);
         assert_eq!(stats.untested, 1);
-        assert_eq!(stats.active_proxy, None);
+        assert_eq!(stats.cooldown, 0);
+        assert_eq!(pool.select_proxy(&HashSet::new()).unwrap().id, ProxyId(1));
     }
 
     #[test]

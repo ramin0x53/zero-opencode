@@ -12,7 +12,7 @@ A lightweight Rust CLI proxy that connects to OpenCode's free tier (`https://ope
 - **Forced-Stream SSE & Non-Streaming Aggregation**: Always streams upstream (required by OpenCode Free) and transparently returns either normalized SSE chunks (`stream: true`) or aggregated `chat.completion` JSON (`stream: false`)
 - **Reasoning & Thinking Support**: Supports `oc/` / `opencode/` model prefixes, `model(level)` effort suffixes (e.g. `deepseek-v4.1-flash-free(max)`), `reasoning_effort`, vendor reasoning alias lifting (`reasoning` / `reasoning_details[]` → `reasoning_content`), and multi-turn `reasoning_content` placeholder injection
 - **Overload Retry & Rotating Proxy Pool**: Retries transient `429 overloaded` responses with jittered backoff, supports single HTTP/HTTPS/SOCKS4/SOCKS5 upstream proxies, and includes an optional health-checked rotating proxy pool with:
-  - Remote proxy list URL loaders (`socks5` / `socks4` / `http` / `mixed`) + `static_proxies`, deduplicated and periodically refreshed (replacing old candidates in memory)
+  - Remote proxy list URL loaders (`socks5` / `socks4` / `http` / `mixed`) + `static_proxies`, deduplicated and periodically refreshed (shuffled after deduplication; refreshes replace untested/dead entries while keeping healthy and cooldown proxies)
   - Universal chaining through `opencode.proxy` when defined (all source fetches, health checks, keep-alive pings, and live requests tunnel through it)
   - Hardcoded two-stage health checks (`GET /zen/v1/models` reachability + `POST /inference/v1/chat/completions` limit verification) and hot-standby TLS keep-alive warming
   - Seamless retry-until-success failover with first-frame SSE peeking, per-proxy session isolation, and Option A speculative hedging (`hedge_delay_ms`)

@@ -94,9 +94,18 @@ async fn fetch_one_source(
     Ok(parse_proxy_list(&text, default_protocol, allow_private))
 }
 
+fn shuffle_in_place<T>(items: &mut [T]) {
+    if items.len() > 1 {
+        for i in (1..items.len()).rev() {
+            let j = rand::random_range(0..=i);
+            items.swap(i, j);
+        }
+    }
+}
+
 /// Fetch all configured proxy source URLs concurrently using `base_client` (which
 /// automatically tunnels through `opencode.proxy` when configured), merge with
-/// `static_proxies`, deduplicate, and shuffle remote entries.
+/// `static_proxies`, deduplicate, and shuffle unique entries.
 pub async fn fetch_all_proxies(
     base_client: &Client,
     cfg: &ProxyPoolConfig,
@@ -105,7 +114,7 @@ pub async fn fetch_all_proxies(
     for raw in &cfg.static_proxies {
         static_items.push(ParsedProxy::parse_explicit(raw, true)?);
     }
-    let static_items = deduplicate_proxies(static_items);
+    let mut static_items = deduplicate_proxies(static_items);
     let static_keys: HashSet<_> = static_items.iter().map(ParsedProxy::key).collect();
 
     let mut source_jobs: Vec<(String, Option<ProxyProtocol>)> = Vec::new();
@@ -162,13 +171,9 @@ pub async fn fetch_all_proxies(
         .filter(|item| !static_keys.contains(&item.key()))
         .collect();
 
-    // Shuffle remote candidates so every source has equal representation during probing.
-    if remote_items.len() > 1 {
-        for i in (1..remote_items.len()).rev() {
-            let j = rand::random_range(0..=i);
-            remote_items.swap(i, j);
-        }
-    }
+    // Shuffle unique candidates after deduplication.
+    shuffle_in_place(&mut static_items);
+    shuffle_in_place(&mut remote_items);
 
     let mut proxies = Vec::with_capacity(static_items.len() + remote_items.len());
     proxies.extend(static_items);
@@ -255,5 +260,62 @@ mod tests {
         assert!(result.proxies[0].is_static);
         // Remote 127.0.0.1:1080 was filtered out
         assert!(!result.proxies.iter().any(|p| p.port == 1080 && p.host == "127.0.0.1"));
+    }
+
+    #[tokio::test]
+    async fn shuffles_unique_loaded_proxies() {
+        let mut list_a = String::new();
+        let mut list_b = String::new();
+        for i in 1..=20u16 {
+            list_a.push_str(&format!("1.1.1.{i}:1080\n"));
+            if i <= 10 {
+                // Duplicates across sources to verify deduplication before shuffling
+                list_b.push_str(&format!("1.1.1.{i}:1080\n"));
+            }
+        }
+
+        let app = Router::new()
+            .route("/a.txt", get(move || async move { list_a.clone() }))
+            .route("/b.txt", get(move || async move { list_b.clone() }));
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
+        let base = format!("http://{addr}");
+
+        let client = build_opencode_client(None, 10).unwrap();
+        let cfg = ProxyPoolConfig {
+            enabled: true,
+            sources: ProxySourcesConfig {
+                socks5: vec![format!("{base}/a.txt"), format!("{base}/b.txt")],
+                ..Default::default()
+            },
+            allow_private_proxies: false,
+            ..Default::default()
+        };
+
+        let first = fetch_all_proxies(&client, &cfg).await.unwrap();
+        assert_eq!(first.proxies.len(), 20);
+        let first_order: Vec<String> = first.proxies.iter().map(ParsedProxy::redacted).collect();
+        let first_set: HashSet<String> = first_order.iter().cloned().collect();
+        assert_eq!(first_set.len(), 20);
+
+        let mut saw_different_order = false;
+        for _ in 0..5 {
+            let next = fetch_all_proxies(&client, &cfg).await.unwrap();
+            assert_eq!(next.proxies.len(), 20);
+            let next_order: Vec<String> = next.proxies.iter().map(ParsedProxy::redacted).collect();
+            let next_set: HashSet<String> = next_order.iter().cloned().collect();
+            assert_eq!(next_set, first_set);
+            if next_order != first_order {
+                saw_different_order = true;
+                break;
+            }
+        }
+        assert!(
+            saw_different_order,
+            "expected fetch_all_proxies to shuffle unique loaded proxies across runs"
+        );
     }
 }
