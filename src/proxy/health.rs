@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
 use futures_util::StreamExt;
@@ -22,11 +23,7 @@ use crate::proxy::loader::fetch_all_proxies;
 use crate::proxy::pool::ProxyPool;
 use crate::stream::sse_parser::{SseLineParser, extract_sse_data};
 
-const PREFERRED_PROBE_MODELS: &[&str] = &[
-    "big-pickle",
-    "mimo-v2.6-flash-free",
-    "deepseek-v4.1-flash-free",
-];
+static PROBE_MODEL_CURSOR: AtomicUsize = AtomicUsize::new(0);
 
 const DEAD_RECHECK_MIN_GAP: Duration = Duration::from_secs(1);
 
@@ -58,7 +55,7 @@ impl ProbeEndpoints {
 
 /// Result of Stage 1 probe (`GET /zen/v1/models`).
 pub enum Stage1Result {
-    Ok { rtt_ms: u64, probe_model: Box<FreeModel> },
+    Ok { rtt_ms: u64, models: Vec<FreeModel> },
     Hop1Down,
     RateLimited { retry_after: Option<Duration>, detail: String },
     Overloaded,
@@ -76,11 +73,21 @@ pub enum Stage2Result {
     Dead(String),
 }
 
-fn select_probe_model(models: &[FreeModel]) -> Option<FreeModel> {
-    PREFERRED_PROBE_MODELS
+fn ordered_probe_models(models: &[FreeModel], start_index: usize) -> Vec<FreeModel> {
+    if models.is_empty() {
+        return Vec::new();
+    }
+    let offset = start_index % models.len();
+    models[offset..]
         .iter()
-        .find_map(|pref| models.iter().find(|m| m.id == *pref).cloned())
-        .or_else(|| models.first().cloned())
+        .chain(&models[..offset])
+        .cloned()
+        .collect()
+}
+
+fn next_probe_models(models: &[FreeModel]) -> Vec<FreeModel> {
+    let start = PROBE_MODEL_CURSOR.fetch_add(1, Ordering::Relaxed);
+    ordered_probe_models(models, start)
 }
 
 /// Stage 1: Verify proxy reachability, TLS integrity, and OpenCode free model catalog availability.
@@ -146,17 +153,36 @@ pub async fn probe_stage1(
     let Ok(models) = filter_free_models_json(&body) else {
         return Stage1Result::Dead("stage1 model catalog parse error".to_string());
     };
-    let Some(probe_model) = select_probe_model(&models) else {
+    if models.is_empty() {
         return Stage1Result::Dead("stage1 returned zero active free models".to_string());
-    };
+    }
 
-    Stage1Result::Ok {
-        rtt_ms,
-        probe_model: Box::new(probe_model),
+    Stage1Result::Ok { rtt_ms, models }
+}
+
+struct Stage2Attempt {
+    result: Stage2Result,
+    retry_other_model: bool,
+}
+
+impl Stage2Attempt {
+    fn terminal(result: Stage2Result) -> Self {
+        Self {
+            result,
+            retry_other_model: false,
+        }
+    }
+
+    fn retryable(result: Stage2Result) -> Self {
+        Self {
+            result,
+            retry_other_model: true,
+        }
     }
 }
 
-/// Stage 2: Verify the proxy IP has not already hit OpenCode's free inference limit.
+/// Stage 2: Verify the proxy IP has not already hit OpenCode's free inference limit
+/// using a specific free model.
 pub async fn probe_stage2(
     client: &Client,
     proxy: &ProxyEndpoint,
@@ -166,9 +192,123 @@ pub async fn probe_stage2(
     sessions: &SessionManager,
     stage_timeout: Duration,
 ) -> Stage2Result {
+    probe_stage2_attempt(
+        client,
+        proxy,
+        bridge,
+        chat_url,
+        probe_model,
+        sessions,
+        stage_timeout,
+    )
+    .await
+    .result
+}
+
+/// Stage 2: Verify the proxy IP has not already hit OpenCode's free inference limit,
+/// rotating across the currently available free models and falling back on model-level errors.
+pub async fn probe_stage2_models(
+    client: &Client,
+    proxy: &ProxyEndpoint,
+    bridge: Option<&Arc<ChainBridge>>,
+    chat_url: &str,
+    available_models: &[FreeModel],
+    sessions: &SessionManager,
+    stage_timeout: Duration,
+) -> Stage2Result {
+    let ordered = next_probe_models(available_models);
+    probe_stage2_ordered(
+        client,
+        proxy,
+        bridge,
+        chat_url,
+        &ordered,
+        sessions,
+        stage_timeout,
+    )
+    .await
+}
+
+async fn probe_stage2_ordered(
+    client: &Client,
+    proxy: &ProxyEndpoint,
+    bridge: Option<&Arc<ChainBridge>>,
+    chat_url: &str,
+    ordered_models: &[FreeModel],
+    sessions: &SessionManager,
+    stage_timeout: Duration,
+) -> Stage2Result {
+    if ordered_models.is_empty() {
+        return Stage2Result::Dead("stage2 has zero available free models".to_string());
+    }
+
+    let overall_started = Instant::now();
+    let min_retry_budget = (stage_timeout / 4).min(Duration::from_millis(500));
+    let mut saw_overloaded = false;
+    let mut last_result = None;
+
+    for (idx, model) in ordered_models.iter().enumerate() {
+        let attempt_timeout = if idx == 0 {
+            stage_timeout
+        } else {
+            if bridge.is_some_and(|b| b.is_hop1_failing()) {
+                return Stage2Result::Hop1Down;
+            }
+            let remaining = stage_timeout.saturating_sub(overall_started.elapsed());
+            if remaining < min_retry_budget || remaining.is_zero() {
+                break;
+            }
+            remaining
+        };
+
+        let attempt = probe_stage2_attempt(
+            client,
+            proxy,
+            bridge,
+            chat_url,
+            model,
+            sessions,
+            attempt_timeout,
+        )
+        .await;
+
+        if matches!(attempt.result, Stage2Result::Healthy { .. }) || !attempt.retry_other_model {
+            return attempt.result;
+        }
+
+        if matches!(attempt.result, Stage2Result::Overloaded) {
+            saw_overloaded = true;
+        }
+
+        debug!(
+            proxy = %proxy.redacted(),
+            model = %model.id,
+            "stage2 probe hit model-level failure; trying next available model"
+        );
+        last_result = Some(attempt.result);
+    }
+
+    if saw_overloaded {
+        Stage2Result::Overloaded
+    } else {
+        last_result.unwrap_or_else(|| {
+            Stage2Result::Dead("stage2 exhausted available free models".to_string())
+        })
+    }
+}
+
+async fn probe_stage2_attempt(
+    client: &Client,
+    proxy: &ProxyEndpoint,
+    bridge: Option<&Arc<ChainBridge>>,
+    chat_url: &str,
+    probe_model: &FreeModel,
+    sessions: &SessionManager,
+    stage_timeout: Duration,
+) -> Stage2Attempt {
     let wreq_proxy = match resolve_wreq_proxy(proxy, bridge) {
         Ok(p) => p,
-        Err(e) => return Stage2Result::Dead(e.to_string()),
+        Err(e) => return Stage2Attempt::terminal(Stage2Result::Dead(e.to_string())),
     };
 
     let mut body = json!({
@@ -180,7 +320,7 @@ pub async fn probe_stage2(
     transform_chat_request(&mut body, &probe_model.id, Some(probe_model));
     let body_bytes = match serde_json::to_vec(&body) {
         Ok(b) => b,
-        Err(e) => return Stage2Result::Dead(e.to_string()),
+        Err(e) => return Stage2Attempt::terminal(Stage2Result::Dead(e.to_string())),
     };
 
     let sid = sessions.generate_session_id();
@@ -198,9 +338,11 @@ pub async fn probe_stage2(
         Ok(r) => r,
         Err(err) => {
             if bridge.is_some_and(|b| b.is_hop1_failing()) {
-                return Stage2Result::Hop1Down;
+                return Stage2Attempt::terminal(Stage2Result::Hop1Down);
             }
-            return Stage2Result::Dead(format!("stage2 transport error: {err}"));
+            return Stage2Attempt::terminal(Stage2Result::Dead(format!(
+                "stage2 transport error: {err}"
+            )));
         }
     };
 
@@ -210,28 +352,38 @@ pub async fn probe_stage2(
     if !status.is_success() {
         let text = res.text().await.unwrap_or_default();
         if status == StatusCode::PROXY_AUTHENTICATION_REQUIRED {
-            return Stage2Result::Dead("stage2 HTTP 407".to_string());
+            return Stage2Attempt::terminal(Stage2Result::Dead("stage2 HTTP 407".to_string()));
         }
         if is_html_response(&resp_headers, text.as_bytes()) {
-            return Stage2Result::Dead("stage2 returned HTML".to_string());
+            return Stage2Attempt::terminal(Stage2Result::Dead(
+                "stage2 returned HTML".to_string(),
+            ));
         }
         if status == StatusCode::FORBIDDEN {
-            return Stage2Result::Forbidden("stage2 HTTP 403".to_string());
+            return Stage2Attempt::terminal(Stage2Result::Forbidden(
+                "stage2 HTTP 403".to_string(),
+            ));
         }
         if status == StatusCode::TOO_MANY_REQUESTS {
             if is_overload_text(&text) {
-                return Stage2Result::Overloaded;
+                return Stage2Attempt::retryable(Stage2Result::Overloaded);
             }
-            return Stage2Result::RateLimited {
+            return Stage2Attempt::terminal(Stage2Result::RateLimited {
                 retry_after: parse_retry_after(&resp_headers),
                 detail: "stage2 HTTP 429 quota limit".to_string(),
-            };
+            });
         }
-        return Stage2Result::Dead(format!("stage2 HTTP {}", status.as_u16()));
+        return Stage2Attempt::retryable(Stage2Result::Dead(format!(
+            "stage2 HTTP {} ({})",
+            status.as_u16(),
+            probe_model.id
+        )));
     }
 
     if is_html_response(&resp_headers, &[]) {
-        return Stage2Result::Dead("stage2 200 returned text/html".to_string());
+        return Stage2Attempt::terminal(Stage2Result::Dead(
+            "stage2 200 returned text/html".to_string(),
+        ));
     }
 
     // Peek just the first non-empty SSE chunk to verify OpenCode did not embed an error event
@@ -244,47 +396,55 @@ pub async fn probe_stage2(
         let chunk_opt = match tokio::time::timeout_at(deadline, stream.next()).await {
             Ok(item) => item,
             Err(_) => {
-                return Stage2Result::Dead("stage2 timed out waiting for first SSE chunk".into());
+                return Stage2Attempt::terminal(Stage2Result::Dead(
+                    "stage2 timed out waiting for first SSE chunk".into(),
+                ));
             }
         };
 
         match chunk_opt {
             None => {
                 if let Some(last) = parser.finish()
-                    && let Some(res) = classify_stage2_sse_line(&last, &resp_headers)
+                    && let Some(attempt) = classify_stage2_sse_line(&last, &resp_headers)
                 {
-                    return res;
+                    return attempt;
                 }
-                return Stage2Result::Dead("stage2 upstream closed with empty stream".into());
+                return Stage2Attempt::terminal(Stage2Result::Dead(
+                    "stage2 upstream closed with empty stream".into(),
+                ));
             }
             Some(Err(err)) => {
-                return Stage2Result::Dead(format!("stage2 stream error: {err}"));
+                return Stage2Attempt::terminal(Stage2Result::Dead(format!(
+                    "stage2 stream error: {err}"
+                )));
             }
             Some(Ok(bytes)) => {
                 if bytes.is_empty() {
                     continue;
                 }
                 if is_html_response(&resp_headers, &bytes) {
-                    return Stage2Result::Dead("stage2 stream returned HTML".to_string());
+                    return Stage2Attempt::terminal(Stage2Result::Dead(
+                        "stage2 stream returned HTML".to_string(),
+                    ));
                 }
                 let lines = parser.push_chunk(&bytes);
                 for line in &lines {
-                    if let Some(res) = classify_stage2_sse_line(line, &resp_headers) {
-                        return res;
+                    if let Some(attempt) = classify_stage2_sse_line(line, &resp_headers) {
+                        return attempt;
                     }
                 }
                 // Check whether any complete data line arrived without error.
                 if lines.iter().any(|l| extract_sse_data(l).is_some_and(|p| !p.is_empty())) {
-                    return Stage2Result::Healthy {
+                    return Stage2Attempt::terminal(Stage2Result::Healthy {
                         rtt_ms: started.elapsed().as_millis() as u64,
-                    };
+                    });
                 }
             }
         }
     }
 }
 
-fn classify_stage2_sse_line(line: &str, headers: &HeaderMap) -> Option<Stage2Result> {
+fn classify_stage2_sse_line(line: &str, headers: &HeaderMap) -> Option<Stage2Attempt> {
     let payload = extract_sse_data(line)?;
     if payload.is_empty() || payload == "[DONE]" {
         return None;
@@ -296,7 +456,7 @@ fn classify_stage2_sse_line(line: &str, headers: &HeaderMap) -> Option<Stage2Res
     let status = err_val.get("status").and_then(Value::as_u64).unwrap_or(0);
 
     if is_overload_text(&err_str) {
-        return Some(Stage2Result::Overloaded);
+        return Some(Stage2Attempt::retryable(Stage2Result::Overloaded));
     }
     if status == 429
         || lower.contains("freeusagelimiterror")
@@ -304,15 +464,19 @@ fn classify_stage2_sse_line(line: &str, headers: &HeaderMap) -> Option<Stage2Res
         || lower.contains("too many requests")
         || lower.contains("quota exceeded")
     {
-        return Some(Stage2Result::RateLimited {
+        return Some(Stage2Attempt::terminal(Stage2Result::RateLimited {
             retry_after: parse_retry_after(headers),
             detail: "stage2 SSE 429 limit".to_string(),
-        });
+        }));
     }
     if status == 403 || lower.contains("freetiererror") || lower.contains("forbidden") {
-        return Some(Stage2Result::Forbidden("stage2 SSE 403".to_string()));
+        return Some(Stage2Attempt::terminal(Stage2Result::Forbidden(
+            "stage2 SSE 403".to_string(),
+        )));
     }
-    Some(Stage2Result::Dead(format!("stage2 SSE error: {err_str}")))
+    Some(Stage2Attempt::retryable(Stage2Result::Dead(format!(
+        "stage2 SSE error: {err_str}"
+    ))))
 }
 
 async fn probe_candidate_batch(
@@ -358,17 +522,17 @@ async fn probe_candidate_batch(
             }
 
             match probe_stage1(&probe_cli, &ep, br.as_ref(), &ep_urls.models_url).await {
-                Stage1Result::Ok { probe_model, .. } => {
+                Stage1Result::Ok { models, .. } => {
                     if pool_c.healthy_count() >= target_healthy {
                         pool_c.release_probe(ep.id);
                         return;
                     }
-                    match probe_stage2(
+                    match probe_stage2_models(
                         &probe_cli,
                         &ep,
                         br.as_ref(),
                         &ep_urls.chat_url,
-                        &probe_model,
+                        &models,
                         &sess,
                         stage_timeout,
                     )
@@ -777,7 +941,6 @@ mod tests {
     use axum::Router;
     use axum::http::header::CONTENT_TYPE;
     use axum::routing::{get, post};
-    use std::sync::atomic::{AtomicUsize, Ordering};
     use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
     use tokio::net::{TcpListener, TcpStream};
 
@@ -1233,5 +1396,315 @@ mod tests {
 
         let collapsed = collapse_consecutive(&visits.lock().unwrap());
         assert_eq!(collapsed, vec![1, 2, 3]);
+    }
+
+    fn test_free_models(ids: &[&str]) -> Vec<FreeModel> {
+        let data: Vec<Value> = ids
+            .iter()
+            .map(|id| {
+                json!({
+                    "id": id,
+                    "type": "chat",
+                    "cost": {"text": {"input": {"price": 0}, "output": {"price": 0}}}
+                })
+            })
+            .collect();
+        let raw = json!({ "object": "list", "data": data }).to_string();
+        filter_free_models_json(&raw).expect("test models should parse")
+    }
+
+    async fn spawn_model_aware_opencode_pair<F>(
+        models_json: String,
+        chat_responder: F,
+    ) -> (String, String, Arc<std::sync::Mutex<Vec<String>>>)
+    where
+        F: Fn(&str) -> (StatusCode, [(axum::http::HeaderName, &'static str); 1], &'static str)
+            + Send
+            + Sync
+            + 'static,
+    {
+        let recorded = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let recorded_ref = Arc::clone(&recorded);
+        let responder = Arc::new(chat_responder);
+
+        let app = Router::new()
+            .route(
+                "/zen/v1/models",
+                get(move || {
+                    let body = models_json.clone();
+                    async move { body }
+                }),
+            )
+            .route(
+                "/inference/v1/chat/completions",
+                post(move |axum::Json(body): axum::Json<Value>| {
+                    let recorded = Arc::clone(&recorded_ref);
+                    let responder = Arc::clone(&responder);
+                    async move {
+                        let model = body
+                            .get("model")
+                            .and_then(Value::as_str)
+                            .unwrap_or("")
+                            .to_string();
+                        recorded.lock().unwrap().push(model.clone());
+                        responder(&model).into_response_tuple()
+                    }
+                }),
+            );
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
+        (
+            format!("http://{addr}/zen/v1/models"),
+            format!("http://{addr}/inference/v1/chat/completions"),
+            recorded,
+        )
+    }
+
+    fn model_ids(models: &[FreeModel]) -> Vec<&str> {
+        models.iter().map(|m| m.id.as_str()).collect()
+    }
+
+    #[test]
+    fn ordered_probe_models_rotates_across_available_models() {
+        let models = test_free_models(&["alpha-free", "beta-free", "gamma-free"]);
+
+        assert!(ordered_probe_models(&[], 0).is_empty());
+        assert_eq!(
+            model_ids(&ordered_probe_models(&models, 0)),
+            vec!["alpha-free", "beta-free", "gamma-free"]
+        );
+        assert_eq!(
+            model_ids(&ordered_probe_models(&models, 1)),
+            vec!["beta-free", "gamma-free", "alpha-free"]
+        );
+        assert_eq!(
+            model_ids(&ordered_probe_models(&models, 2)),
+            vec!["gamma-free", "alpha-free", "beta-free"]
+        );
+        assert_eq!(
+            model_ids(&ordered_probe_models(&models, 3)),
+            vec!["alpha-free", "beta-free", "gamma-free"]
+        );
+
+        let mut seen_first = std::collections::HashSet::new();
+        for _ in 0..3 {
+            let rotated = next_probe_models(&models);
+            assert_eq!(rotated.len(), 3);
+            seen_first.insert(rotated[0].id.clone());
+        }
+        assert_eq!(seen_first.len(), 3);
+    }
+
+    #[tokio::test]
+    async fn stage2_falls_back_across_available_models_on_model_error_and_overload() {
+        let models = test_free_models(&["alpha-free", "beta-free", "gamma-free"]);
+        let (_models_url, chat_url, recorded) =
+            spawn_model_aware_opencode_pair("{}".to_string(), |model| match model {
+                "alpha-free" => (
+                    StatusCode::NOT_FOUND,
+                    [(CONTENT_TYPE, "application/json")],
+                    r#"{"error":{"message":"model unavailable"}}"#,
+                ),
+                "beta-free" => (
+                    StatusCode::TOO_MANY_REQUESTS,
+                    [(CONTENT_TYPE, "application/json")],
+                    r#"{"error":{"message":"upstream overloaded"}}"#,
+                ),
+                "gamma-free" => (
+                    StatusCode::OK,
+                    [(CONTENT_TYPE, "text/event-stream")],
+                    "data: {\"choices\":[{\"delta\":{\"content\":\"ok\"}}]}\n\ndata: [DONE]\n\n",
+                ),
+                _ => panic!("unexpected model: {model}"),
+            })
+            .await;
+
+        let visits = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let proxy_addr = spawn_scripted_socks5_proxy(1, visits, Some(1)).await;
+        let ep = ParsedProxy::parse_explicit(&format!("socks5h://{proxy_addr}"), true)
+            .unwrap()
+            .into_endpoint(ProxyId(1));
+        let probe_client = build_probe_client(5).unwrap();
+        let sessions = SessionManager::new(Duration::from_secs(7200));
+
+        let res = probe_stage2_ordered(
+            &probe_client,
+            &ep,
+            None,
+            &chat_url,
+            &models,
+            &sessions,
+            Duration::from_secs(5),
+        )
+        .await;
+
+        assert!(matches!(res, Stage2Result::Healthy { .. }));
+        assert_eq!(
+            recorded.lock().unwrap().as_slice(),
+            &["alpha-free", "beta-free", "gamma-free"]
+        );
+    }
+
+    #[tokio::test]
+    async fn stage2_does_not_retry_other_models_on_rate_limit_or_forbidden() {
+        let models = test_free_models(&["alpha-free", "beta-free", "gamma-free"]);
+        let visits = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let proxy_addr = spawn_scripted_socks5_proxy(1, visits, Some(1)).await;
+        let ep = ParsedProxy::parse_explicit(&format!("socks5h://{proxy_addr}"), true)
+            .unwrap()
+            .into_endpoint(ProxyId(1));
+        let probe_client = build_probe_client(5).unwrap();
+        let sessions = SessionManager::new(Duration::from_secs(7200));
+
+        let (_models_url, rl_chat_url, rl_recorded) =
+            spawn_model_aware_opencode_pair("{}".to_string(), |_| {
+                (
+                    StatusCode::TOO_MANY_REQUESTS,
+                    [(CONTENT_TYPE, "application/json")],
+                    r#"{"error":{"type":"FreeUsageLimitError"}}"#,
+                )
+            })
+            .await;
+        let rl_res = probe_stage2_ordered(
+            &probe_client,
+            &ep,
+            None,
+            &rl_chat_url,
+            &models,
+            &sessions,
+            Duration::from_secs(5),
+        )
+        .await;
+        assert!(matches!(rl_res, Stage2Result::RateLimited { .. }));
+        assert_eq!(rl_recorded.lock().unwrap().len(), 1);
+
+        let (_models_url, fb_chat_url, fb_recorded) =
+            spawn_model_aware_opencode_pair("{}".to_string(), |_| {
+                (
+                    StatusCode::FORBIDDEN,
+                    [(CONTENT_TYPE, "application/json")],
+                    r#"{"error":{"type":"FreeTierError"}}"#,
+                )
+            })
+            .await;
+        let fb_res = probe_stage2_ordered(
+            &probe_client,
+            &ep,
+            None,
+            &fb_chat_url,
+            &models,
+            &sessions,
+            Duration::from_secs(5),
+        )
+        .await;
+        assert!(matches!(fb_res, Stage2Result::Forbidden(_)));
+        assert_eq!(fb_recorded.lock().unwrap().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn stage2_preserves_overloaded_when_fallback_hits_model_error() {
+        let models = test_free_models(&["beta-free", "alpha-free"]);
+        let (_models_url, chat_url, recorded) =
+            spawn_model_aware_opencode_pair("{}".to_string(), |model| match model {
+                "beta-free" => (
+                    StatusCode::TOO_MANY_REQUESTS,
+                    [(CONTENT_TYPE, "application/json")],
+                    r#"{"error":{"message":"overloaded"}}"#,
+                ),
+                "alpha-free" => (
+                    StatusCode::NOT_FOUND,
+                    [(CONTENT_TYPE, "application/json")],
+                    r#"{"error":{"message":"not found"}}"#,
+                ),
+                _ => panic!("unexpected model: {model}"),
+            })
+            .await;
+
+        let visits = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let proxy_addr = spawn_scripted_socks5_proxy(1, visits, Some(1)).await;
+        let ep = ParsedProxy::parse_explicit(&format!("socks5h://{proxy_addr}"), true)
+            .unwrap()
+            .into_endpoint(ProxyId(1));
+        let probe_client = build_probe_client(5).unwrap();
+        let sessions = SessionManager::new(Duration::from_secs(7200));
+
+        let res = probe_stage2_ordered(
+            &probe_client,
+            &ep,
+            None,
+            &chat_url,
+            &models,
+            &sessions,
+            Duration::from_secs(5),
+        )
+        .await;
+
+        assert!(matches!(res, Stage2Result::Overloaded));
+        assert_eq!(recorded.lock().unwrap().as_slice(), &["beta-free", "alpha-free"]);
+    }
+
+    #[tokio::test]
+    async fn two_stage_probe_uses_dynamic_available_models_without_hardcoded_names() {
+        let models_json = json!({
+            "object": "list",
+            "data": [
+                {"id": "alpha-free", "type": "chat", "cost": {"text": {"input": {"price": 0}, "output": {"price": 0}}}},
+                {"id": "beta-free", "type": "chat", "cost": {"text": {"input": {"price": 0}, "output": {"price": 0}}}},
+                {"id": "gamma-free", "type": "chat", "cost": {"text": {"input": {"price": 0}, "output": {"price": 0}}}}
+            ]
+        })
+        .to_string();
+
+        let (models_url, chat_url, recorded) =
+            spawn_model_aware_opencode_pair(models_json, |model| match model {
+                "alpha-free" => (
+                    StatusCode::NOT_FOUND,
+                    [(CONTENT_TYPE, "application/json")],
+                    r#"{"error":{"message":"model unavailable"}}"#,
+                ),
+                "beta-free" => (
+                    StatusCode::TOO_MANY_REQUESTS,
+                    [(CONTENT_TYPE, "application/json")],
+                    r#"{"error":{"message":"overloaded"}}"#,
+                ),
+                "gamma-free" => (
+                    StatusCode::OK,
+                    [(CONTENT_TYPE, "text/event-stream")],
+                    "data: {\"choices\":[{\"delta\":{\"content\":\"ok\"}}]}\n\ndata: [DONE]\n\n",
+                ),
+                _ => panic!("unexpected hardcoded or unknown model: {model}"),
+            })
+            .await;
+
+        let visits = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let proxy_addr = spawn_scripted_socks5_proxy(1, visits, Some(1)).await;
+
+        let mut cfg = ProxyPoolConfig {
+            enabled: true,
+            ..Default::default()
+        };
+        cfg.health_check.concurrency = 1;
+        cfg.health_check.target_healthy = 1;
+        cfg.health_check.hot_standby_count = 0;
+
+        let pool = ProxyPool::new(
+            cfg,
+            vec![ParsedProxy::parse_explicit(&format!("socks5h://{proxy_addr}"), true).unwrap()],
+            None,
+        );
+        let probe_client = build_probe_client(5).unwrap();
+        let pool_client = build_pool_client(4, 30).unwrap();
+        let sessions = Arc::new(SessionManager::new(Duration::from_secs(7200)));
+        let endpoints = ProbeEndpoints::for_tests(models_url, chat_url);
+
+        run_probe_wave(&pool, &probe_client, &pool_client, &sessions, &endpoints).await;
+
+        assert_eq!(pool.stats().healthy, 1);
+        let used_models = recorded.lock().unwrap();
+        assert!(used_models.iter().any(|m| m == "gamma-free"));
     }
 }

@@ -2278,12 +2278,158 @@
 
     const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
     const numFmt = new Intl.NumberFormat();
-    const timeFmt = new Intl.DateTimeFormat(undefined, {
+    const TIME_ONLY_OPTS = {
       hour: "2-digit",
       minute: "2-digit",
       second: "2-digit",
-      hour12: false,
-    });
+      hourCycle: "h23",
+    };
+    const DATE_TIME_SHORT_OPTS = {
+      month: "short",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23",
+    };
+    const DATE_TIME_FULL_OPTS = {
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23",
+      timeZoneName: "short",
+    };
+    let intlFmtCache = { key: null, fmts: null };
+
+    function getClientTimeZone() {
+      try {
+        if (typeof Temporal !== "undefined" && Temporal?.Now?.timeZoneId) {
+          const tz = Temporal.Now.timeZoneId();
+          if (typeof tz === "string" && tz.trim()) return tz;
+        }
+      } catch {}
+      try {
+        const tz = new Intl.DateTimeFormat().resolvedOptions().timeZone;
+        if (typeof tz === "string" && tz.trim()) return tz;
+      } catch {}
+      return undefined;
+    }
+
+    function getIntlFormatters(tz) {
+      const cacheKey = tz || "";
+      if (intlFmtCache.key === cacheKey && intlFmtCache.fmts) {
+        return intlFmtCache.fmts;
+      }
+      const tzOpt = tz ? { timeZone: tz } : {};
+      const fmts = {
+        time: new Intl.DateTimeFormat(undefined, { ...TIME_ONLY_OPTS, ...tzOpt }),
+        dateTimeShort: new Intl.DateTimeFormat(undefined, { ...DATE_TIME_SHORT_OPTS, ...tzOpt }),
+        dateTimeFull: new Intl.DateTimeFormat(undefined, { ...DATE_TIME_FULL_OPTS, ...tzOpt }),
+        dayKey: new Intl.DateTimeFormat("en-CA", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          ...tzOpt,
+        }),
+        tzShort: new Intl.DateTimeFormat(undefined, { timeZoneName: "short", ...tzOpt }),
+      };
+      intlFmtCache = { key: cacheKey, fmts };
+      return fmts;
+    }
+
+    function toValidEpochMs(value) {
+      const ms = Number(value);
+      return Number.isFinite(ms) && ms > 0 ? Math.trunc(ms) : null;
+    }
+
+    function toClientZonedDateTime(epochMs, tz) {
+      if (!tz || typeof Temporal === "undefined" || typeof Temporal?.Instant?.fromEpochMilliseconds !== "function") {
+        return null;
+      }
+      try {
+        return Temporal.Instant.fromEpochMilliseconds(epochMs).toZonedDateTimeISO(tz);
+      } catch {
+        return null;
+      }
+    }
+
+    function isSameClientDay(epochMs, refMs, tz) {
+      const z1 = toClientZonedDateTime(epochMs, tz);
+      const z2 = toClientZonedDateTime(refMs, tz);
+      if (z1 && z2) {
+        return z1.year === z2.year && z1.month === z2.month && z1.day === z2.day;
+      }
+      const fmts = getIntlFormatters(tz);
+      return fmts.dayKey.format(new Date(epochMs)) === fmts.dayKey.format(new Date(refMs));
+    }
+
+    function formatEpochWith(epochMs, opts, intlKey, tz = getClientTimeZone()) {
+      const ms = toValidEpochMs(epochMs);
+      if (ms === null) return "-";
+      const zdt = toClientZonedDateTime(ms, tz);
+      if (zdt) {
+        try {
+          return zdt.toLocaleString(undefined, opts);
+        } catch {}
+      }
+      return getIntlFormatters(tz)[intlKey].format(new Date(ms));
+    }
+
+    function getClientTimeZoneShort(epochMs) {
+      const ms = toValidEpochMs(epochMs);
+      if (ms === null) return "";
+      const tz = getClientTimeZone();
+      try {
+        const part = getIntlFormatters(tz).tzShort.formatToParts(new Date(ms)).find((p) => p.type === "timeZoneName");
+        if (part && part.value) return part.value;
+      } catch {}
+      return tz || "";
+    }
+
+    function formatLocalTime(epochMs) {
+      return formatEpochWith(epochMs, TIME_ONLY_OPTS, "time");
+    }
+
+    function formatLocalDateTime(epochMs) {
+      return formatEpochWith(epochMs, DATE_TIME_FULL_OPTS, "dateTimeFull");
+    }
+
+    function formatLocalDateTimeWithZone(epochMs) {
+      const formatted = formatLocalDateTime(epochMs);
+      if (formatted === "-") return "-";
+      const tz = getClientTimeZone();
+      return tz && !formatted.includes(tz) ? `${formatted} (${tz})` : formatted;
+    }
+
+    function formatCompactTimestamp(epochMs, refMs = Date.now()) {
+      const ms = toValidEpochMs(epochMs);
+      if (ms === null) return "-";
+      const tz = getClientTimeZone();
+      const ref = toValidEpochMs(refMs) ?? Date.now();
+      return isSameClientDay(ms, ref, tz)
+        ? formatEpochWith(ms, TIME_ONLY_OPTS, "time", tz)
+        : formatEpochWith(ms, DATE_TIME_SHORT_OPTS, "dateTimeShort", tz);
+    }
+
+    function makeTimeCell(tag, epochMs, refMs = Date.now()) {
+      const cell = document.createElement(tag);
+      cell.className = "tabular";
+      const ms = toValidEpochMs(epochMs);
+      cell.dataset.value = String(ms || 0);
+      if (ms === null) {
+        cell.textContent = "-";
+        return cell;
+      }
+      const timeEl = document.createElement("time");
+      timeEl.dateTime = new Date(ms).toISOString();
+      timeEl.title = formatLocalDateTimeWithZone(ms);
+      timeEl.textContent = formatCompactTimestamp(ms, refMs);
+      cell.appendChild(timeEl);
+      return cell;
+    }
 
     const el = (id) => document.getElementById(id);
 
@@ -2850,10 +2996,24 @@
         } else {
           renderProxiesTable(overview.proxies || [], overview.proxy_pool);
         }
-        el("last-updated").textContent = `Updated ${timeFmt.format(new Date())}`;
+        const updatedEl = el("last-updated");
+        const nowMs = Date.now();
+        clearNode(updatedEl);
+        updatedEl.appendChild(document.createTextNode("Updated "));
+        const timeEl = document.createElement("time");
+        timeEl.dateTime = new Date(nowMs).toISOString();
+        timeEl.textContent = formatLocalTime(nowMs);
+        updatedEl.appendChild(timeEl);
+        const tzShort = getClientTimeZoneShort(nowMs);
+        if (tzShort) {
+          updatedEl.appendChild(document.createTextNode(` ${tzShort}`));
+        }
+        updatedEl.title = `Last updated: ${formatLocalDateTimeWithZone(nowMs)}`;
       } catch (err) {
         if (err && err.message !== "Unauthorized") {
-          el("last-updated").textContent = `Sync error: ${err.message}`;
+          const updatedEl = el("last-updated");
+          updatedEl.textContent = `Sync error: ${err.message}`;
+          updatedEl.title = "";
         }
       } finally {
         refreshBtn.classList.remove("is-spinning");
@@ -3140,6 +3300,7 @@
 
       const slotW = 240 / Math.max(sample.length, 1);
       const barW = Math.max(3, Math.min(12, slotW - 2.5));
+      const nowMs = Date.now();
       sample.forEach((r, idx) => {
         const dur = Math.max(1, Number(r.duration_ms || 0));
         const h = Math.max(4, Math.round((dur / maxMs) * 58));
@@ -3154,7 +3315,10 @@
         const cls = r.status >= 500 ? "spark-bar-err" : r.status >= 400 ? "spark-bar-warn" : "spark-bar-ok";
         rect.setAttribute("class", cls);
         const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
-        title.textContent = `${r.method} ${r.path} · ${r.status} · ${dur} ms`;
+        const tsPrefix = toValidEpochMs(r.timestamp_ms) !== null
+          ? `${formatCompactTimestamp(r.timestamp_ms, nowMs)} · `
+          : "";
+        title.textContent = `${tsPrefix}${r.method} ${r.path} · ${r.status} · ${dur} ms`;
         rect.appendChild(title);
         svg.appendChild(rect);
       });
@@ -3171,6 +3335,7 @@
         return;
       }
       clearNode(tbody);
+      const nowMs = Date.now();
       for (const m of models) {
         const tr = document.createElement("tr");
         tr.appendChild(clippedCell("th", m.model, "mono cell-clip", m.model));
@@ -3191,9 +3356,7 @@
         tdLat.dataset.value = String(m.avg_latency_ms);
         tr.appendChild(tdLat);
 
-        const tdUsed = cellText("td", m.last_used_ms ? timeFmt.format(new Date(m.last_used_ms)) : "-", "tabular");
-        tdUsed.dataset.value = String(m.last_used_ms || 0);
-        tr.appendChild(tdUsed);
+        tr.appendChild(makeTimeCell("td", m.last_used_ms, nowMs));
 
         tbody.appendChild(tr);
       }
@@ -3236,6 +3399,7 @@
       }
 
       clearNode(tbody);
+      const nowMs = Date.now();
       for (const p of filtered) {
         const tr = document.createElement("tr");
         tr.className = "clickable-row";
@@ -3304,6 +3468,13 @@
         const detail = parts.join(" | ") || "-";
         tr.appendChild(clippedCell("td", detail, "cell-clip cell-detail", detail));
 
+        const cooldownDetail =
+          p.cooldown_remaining_secs === null || p.cooldown_remaining_secs === undefined
+            ? "-"
+            : p.cooldown_remaining_secs > 0
+              ? `${p.cooldown_remaining_secs}s (until ${formatCompactTimestamp(nowMs + p.cooldown_remaining_secs * 1000, nowMs)})`
+              : "0s";
+
         tr.addEventListener("click", () => {
           openDetailDialog(
             `Proxy · ${p.proxy}`,
@@ -3314,7 +3485,7 @@
               ["RTT / EWMA", rtt !== null && rtt !== undefined ? `${rtt} ms` : "-"],
               ["OK Count", String(p.ok_count || 0)],
               ["Consecutive Fails", String(p.consecutive_failures || 0)],
-              ["Cooldown Remaining", p.cooldown_remaining_secs !== null && p.cooldown_remaining_secs !== undefined ? `${p.cooldown_remaining_secs}s` : "-"],
+              ["Cooldown Remaining", cooldownDetail],
               ["Source", srcText],
             ],
             p.last_error || "No errors recorded for this proxy.",
@@ -3349,13 +3520,12 @@
       }
 
       clearNode(tbody);
+      const nowMs = Date.now();
       for (const r of filtered) {
         const tr = document.createElement("tr");
         tr.className = "clickable-row";
 
-        const thTime = cellText("th", timeFmt.format(new Date(r.timestamp_ms)), "tabular");
-        thTime.dataset.value = String(r.timestamp_ms || 0);
-        tr.appendChild(thTime);
+        tr.appendChild(makeTimeCell("th", r.timestamp_ms, nowMs));
 
         const tdEp = document.createElement("td");
         tdEp.dataset.value = `${r.method} ${r.path}`;
@@ -3397,7 +3567,7 @@
           openDetailDialog(
             `Request · ${r.method} ${r.path}`,
             [
-              ["Time", timeFmt.format(new Date(r.timestamp_ms))],
+              ["Time", formatLocalDateTimeWithZone(r.timestamp_ms)],
               ["HTTP Status", String(r.status)],
               ["Model", r.model || "-"],
               ["Mode", mode],

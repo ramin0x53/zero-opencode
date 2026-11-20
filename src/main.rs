@@ -208,14 +208,10 @@ async fn run_test_cmd(
         }
     }
 
-    let models = catalog.list().await?;
     let selected: Option<FreeModel> = if let Some(m) = requested_model {
         catalog.get(m).await?
     } else {
-        ["big-pickle", "mimo-v2.6-flash-free", "deepseek-v4.1-flash-free"]
-            .iter()
-            .find_map(|pref| models.iter().find(|m| m.id == *pref).cloned())
-            .or_else(|| models.first().cloned())
+        catalog.list().await?.into_iter().next()
     };
 
     let target_model = requested_model
