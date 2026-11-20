@@ -28,6 +28,8 @@ const PREFERRED_PROBE_MODELS: &[&str] = &[
     "deepseek-v4.1-flash-free",
 ];
 
+const DEAD_RECHECK_MIN_GAP: Duration = Duration::from_secs(1);
+
 /// Hardcoded upstream endpoints for two-stage health checks.
 #[derive(Debug, Clone)]
 pub struct ProbeEndpoints {
@@ -313,6 +315,106 @@ fn classify_stage2_sse_line(line: &str, headers: &HeaderMap) -> Option<Stage2Res
     Some(Stage2Result::Dead(format!("stage2 SSE error: {err_str}")))
 }
 
+async fn probe_candidate_batch(
+    pool: &Arc<ProxyPool>,
+    probe_client: &Client,
+    pool_client: &Client,
+    sessions: &Arc<SessionManager>,
+    endpoints: &ProbeEndpoints,
+    batch: Vec<ProxyEndpoint>,
+) {
+    if batch.is_empty() {
+        return;
+    }
+    let cfg = pool.config().clone();
+    let concurrency = cfg.health_check.concurrency.max(1);
+    let target_healthy = cfg.health_check.target_healthy;
+    let stage_timeout = Duration::from_secs(cfg.health_check.timeout_secs);
+    let bridge = pool.bridge().cloned();
+    let hot_count = cfg.health_check.hot_standby_count;
+    let sem = Arc::new(Semaphore::new(concurrency));
+
+    let mut handles = Vec::with_capacity(batch.len());
+    for ep in batch {
+        let permit = sem.clone().acquire_owned().await.expect("semaphore open");
+        let pool_c = Arc::clone(pool);
+        let probe_cli = probe_client.clone();
+        let live_cli = pool_client.clone();
+        let sess = Arc::clone(sessions);
+        let br = bridge.clone();
+        let ep_urls = endpoints.clone();
+
+        handles.push(tokio::spawn(async move {
+            let _permit = permit;
+
+            // Stop early if another worker already reached target_healthy.
+            if pool_c.healthy_count() >= target_healthy {
+                pool_c.release_probe(ep.id);
+                return;
+            }
+            if br.as_ref().is_some_and(|b| b.is_hop1_failing()) {
+                pool_c.release_probe(ep.id);
+                return;
+            }
+
+            match probe_stage1(&probe_cli, &ep, br.as_ref(), &ep_urls.models_url).await {
+                Stage1Result::Ok { probe_model, .. } => {
+                    if pool_c.healthy_count() >= target_healthy {
+                        pool_c.release_probe(ep.id);
+                        return;
+                    }
+                    match probe_stage2(
+                        &probe_cli,
+                        &ep,
+                        br.as_ref(),
+                        &ep_urls.chat_url,
+                        &probe_model,
+                        &sess,
+                        stage_timeout,
+                    )
+                    .await
+                    {
+                        Stage2Result::Healthy { rtt_ms } => {
+                            pool_c.report_success(ep.id, rtt_ms);
+                            debug!(proxy = %ep.redacted(), rtt_ms, "proxy verified healthy (Stage 1 + Stage 2)");
+                            if pool_c.is_top_hot_standby(ep.id, hot_count) {
+                                // Pre-warm TLS + chain tunnel in pool_client so failover is instant.
+                                let _ = probe_stage1(
+                                    &live_cli,
+                                    &ep,
+                                    br.as_ref(),
+                                    &ep_urls.models_url,
+                                )
+                                .await;
+                            }
+                        }
+                        Stage2Result::Hop1Down => pool_c.release_probe(ep.id),
+                        Stage2Result::RateLimited {
+                            retry_after,
+                            detail,
+                        } => pool_c.report_rate_limited(ep.id, retry_after, detail),
+                        Stage2Result::Overloaded => pool_c.report_overloaded(ep.id),
+                        Stage2Result::Forbidden(detail) => pool_c.report_forbidden(ep.id, detail),
+                        Stage2Result::Dead(detail) => pool_c.report_dead(ep.id, detail),
+                    }
+                }
+                Stage1Result::Hop1Down => pool_c.release_probe(ep.id),
+                Stage1Result::RateLimited {
+                    retry_after,
+                    detail,
+                } => pool_c.report_rate_limited(ep.id, retry_after, detail),
+                Stage1Result::Overloaded => pool_c.report_overloaded(ep.id),
+                Stage1Result::Forbidden(detail) => pool_c.report_forbidden(ep.id, detail),
+                Stage1Result::Dead(detail) => pool_c.report_dead(ep.id, detail),
+            }
+        }));
+    }
+
+    for h in handles {
+        let _ = h.await;
+    }
+}
+
 /// Probe `Untested` proxies concurrently using Stage 1 + Stage 2 until
 /// `healthy >= target_healthy` or `Untested` candidates are exhausted.
 pub async fn run_probe_wave(
@@ -325,10 +427,7 @@ pub async fn run_probe_wave(
     let cfg = pool.config().clone();
     let concurrency = cfg.health_check.concurrency.max(1);
     let target_healthy = cfg.health_check.target_healthy;
-    let stage_timeout = Duration::from_secs(cfg.health_check.timeout_secs);
     let bridge = pool.bridge().cloned();
-
-    let sem = Arc::new(Semaphore::new(concurrency));
 
     loop {
         if pool.healthy_count() >= target_healthy {
@@ -350,87 +449,156 @@ pub async fn run_probe_wave(
             break;
         }
 
-        let mut handles = Vec::with_capacity(batch.len());
-        for ep in batch {
-            let permit = sem.clone().acquire_owned().await.expect("semaphore open");
-            let pool_c = Arc::clone(pool);
-            let probe_cli = probe_client.clone();
-            let live_cli = pool_client.clone();
-            let sess = Arc::clone(sessions);
-            let br = bridge.clone();
-            let ep_urls = endpoints.clone();
-            let hot_count = cfg.health_check.hot_standby_count;
+        probe_candidate_batch(pool, probe_client, pool_client, sessions, endpoints, batch).await;
+    }
+}
 
-            handles.push(tokio::spawn(async move {
-                let _permit = permit;
+/// Re-probe one batch (up to `concurrency`) of `Dead` proxies ordered from first-tested
+/// to last-tested, returning the number of proxies popped for probing.
+pub async fn run_dead_recheck_batch(
+    pool: &Arc<ProxyPool>,
+    probe_client: &Client,
+    pool_client: &Client,
+    sessions: &Arc<SessionManager>,
+    endpoints: &ProbeEndpoints,
+) -> usize {
+    let cfg = pool.config().clone();
+    let concurrency = cfg.health_check.concurrency.max(1);
+    let target_healthy = cfg.health_check.target_healthy;
+    if pool.healthy_count() >= target_healthy {
+        return 0;
+    }
+    if let Some(b) = pool.bridge()
+        && b.is_hop1_failing()
+        && !b.check_hop1_reachable().await
+    {
+        warn!(
+            error = ?b.last_hop1_error(),
+            "chain proxy (Hop 1) unreachable; pausing dead proxy re-check"
+        );
+        return 0;
+    }
 
-                // Stop early if another worker already reached target_healthy.
-                if pool_c.healthy_count() >= target_healthy {
-                    pool_c.release_probe(ep.id);
-                    return;
-                }
-                if br.as_ref().is_some_and(|b| b.is_hop1_failing()) {
-                    pool_c.release_probe(ep.id);
-                    return;
-                }
+    let batch = pool.take_dead_batch(concurrency);
+    let count = batch.len();
+    if count == 0 {
+        return 0;
+    }
 
-                match probe_stage1(&probe_cli, &ep, br.as_ref(), &ep_urls.models_url).await {
-                    Stage1Result::Ok { probe_model, .. } => {
-                        if pool_c.healthy_count() >= target_healthy {
-                            pool_c.release_probe(ep.id);
-                            return;
-                        }
-                        match probe_stage2(
-                            &probe_cli,
-                            &ep,
-                            br.as_ref(),
-                            &ep_urls.chat_url,
-                            &probe_model,
-                            &sess,
-                            stage_timeout,
-                        )
-                        .await
-                        {
-                            Stage2Result::Healthy { rtt_ms } => {
-                                pool_c.report_success(ep.id, rtt_ms);
-                                debug!(proxy = %ep.redacted(), rtt_ms, "proxy verified healthy (Stage 1 + Stage 2)");
-                                if pool_c.is_top_hot_standby(ep.id, hot_count) {
-                                    // Pre-warm TLS + chain tunnel in pool_client so failover is instant.
-                                    let _ = probe_stage1(
-                                        &live_cli,
-                                        &ep,
-                                        br.as_ref(),
-                                        &ep_urls.models_url,
-                                    )
-                                    .await;
-                                }
-                            }
-                            Stage2Result::Hop1Down => pool_c.release_probe(ep.id),
-                            Stage2Result::RateLimited {
-                                retry_after,
-                                detail,
-                            } => pool_c.report_rate_limited(ep.id, retry_after, detail),
-                            Stage2Result::Overloaded => pool_c.report_overloaded(ep.id),
-                            Stage2Result::Forbidden(detail) => {
-                                pool_c.report_forbidden(ep.id, detail)
-                            }
-                            Stage2Result::Dead(detail) => pool_c.report_dead(ep.id, detail),
-                        }
-                    }
-                    Stage1Result::Hop1Down => pool_c.release_probe(ep.id),
-                    Stage1Result::RateLimited {
-                        retry_after,
-                        detail,
-                    } => pool_c.report_rate_limited(ep.id, retry_after, detail),
-                    Stage1Result::Overloaded => pool_c.report_overloaded(ep.id),
-                    Stage1Result::Forbidden(detail) => pool_c.report_forbidden(ep.id, detail),
-                    Stage1Result::Dead(detail) => pool_c.report_dead(ep.id, detail),
-                }
-            }));
+    probe_candidate_batch(pool, probe_client, pool_client, sessions, endpoints, batch).await;
+    count
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn run_prober_loop(
+    pool: Arc<ProxyPool>,
+    base_client: Client,
+    probe_client: Client,
+    pool_client: Client,
+    sessions: Arc<SessionManager>,
+    endpoints: ProbeEndpoints,
+    mut shutdown_rx: watch::Receiver<bool>,
+    dead_recheck_min_gap: Duration,
+) {
+    let cfg = pool.config().clone();
+    let mut last_emergency_refresh: Option<Instant> = None;
+    run_probe_wave(&pool, &probe_client, &pool_client, &sessions, &endpoints).await;
+
+    loop {
+        if *shutdown_rx.borrow() {
+            break;
         }
 
-        for h in handles {
-            let _ = h.await;
+        pool.sweep_expired_cooldowns();
+
+        if pool.healthy_count() < cfg.health_check.target_healthy {
+            if pool.untested_count() > 0 {
+                run_probe_wave(&pool, &probe_client, &pool_client, &sessions, &endpoints).await;
+                if *shutdown_rx.borrow() {
+                    break;
+                }
+            }
+
+            if pool.healthy_count() < cfg.health_check.target_healthy && pool.untested_count() == 0
+            {
+                if pool.healthy_count() == 0
+                    && (!cfg.health_check.recheck_dead || pool.dead_count() == 0)
+                    && !cfg.sources.is_empty()
+                    && last_emergency_refresh
+                        .is_none_or(|t| t.elapsed() >= Duration::from_secs(60))
+                {
+                    last_emergency_refresh = Some(Instant::now());
+                    if let Ok(loaded) = fetch_all_proxies(&base_client, &cfg).await {
+                        let rep = pool.replace_proxies(loaded.proxies);
+                        debug!(?rep, "emergency proxy list refresh finished");
+                    }
+                    if pool.untested_count() > 0 {
+                        continue;
+                    }
+                }
+
+                if cfg.health_check.recheck_dead {
+                    if let Some(delay) = pool.next_dead_recheck_delay(dead_recheck_min_gap) {
+                        if !delay.is_zero() {
+                            tokio::select! {
+                                changed = shutdown_rx.changed() => {
+                                    if changed.is_err() || *shutdown_rx.borrow() {
+                                        break;
+                                    }
+                                }
+                                _ = pool.needs_probe.notified() => {
+                                    continue;
+                                }
+                                _ = tokio::time::sleep(delay) => {}
+                            }
+                            if *shutdown_rx.borrow() {
+                                break;
+                            }
+                            pool.sweep_expired_cooldowns();
+                            if pool.untested_count() > 0
+                                || pool.healthy_count() >= cfg.health_check.target_healthy
+                            {
+                                continue;
+                            }
+                        }
+
+                        let probed = run_dead_recheck_batch(
+                            &pool,
+                            &probe_client,
+                            &pool_client,
+                            &sessions,
+                            &endpoints,
+                        )
+                        .await;
+                        let hop1_paused = pool.bridge().is_some_and(|b| b.is_hop1_failing());
+                        if *shutdown_rx.borrow() {
+                            break;
+                        }
+                        if probed > 0
+                            && !hop1_paused
+                            && pool.healthy_count() < cfg.health_check.target_healthy
+                            && (pool.untested_count() > 0 || pool.dead_count() > 0)
+                        {
+                            tokio::task::yield_now().await;
+                            continue;
+                        }
+                    }
+                } else if pool.healthy_count() == 0
+                    && pool.recycle_old_dead(Duration::from_secs(600)) > 0
+                {
+                    continue;
+                }
+            }
+        }
+
+        tokio::select! {
+            changed = shutdown_rx.changed() => {
+                if changed.is_err() || *shutdown_rx.borrow() {
+                    break;
+                }
+            }
+            _ = pool.needs_probe.notified() => {}
+            _ = tokio::time::sleep(Duration::from_secs(10)) => {}
         }
     }
 }
@@ -455,59 +623,18 @@ pub fn spawn_background_tasks(
         let pool_client = pool_client.clone();
         let sessions = Arc::clone(&sessions);
         let endpoints = endpoints.clone();
-        let cfg = cfg.clone();
-        let mut rx = shutdown_rx.clone();
+        let rx = shutdown_rx.clone();
 
-        tokio::spawn(async move {
-            let mut last_emergency_refresh: Option<Instant> = None;
-            run_probe_wave(&pool, &probe_client, &pool_client, &sessions, &endpoints).await;
-
-            loop {
-                tokio::select! {
-                    changed = rx.changed() => {
-                        if changed.is_err() || *rx.borrow() {
-                            break;
-                        }
-                    }
-                    _ = pool.needs_probe.notified() => {}
-                    _ = tokio::time::sleep(Duration::from_secs(10)) => {}
-                }
-
-                if *rx.borrow() {
-                    break;
-                }
-
-                pool.sweep_expired_cooldowns();
-
-                if pool.healthy_count() < cfg.health_check.target_healthy {
-                    if pool.untested_count() == 0
-                        && pool.healthy_count() == 0
-                        && !cfg.sources.is_empty()
-                        && last_emergency_refresh
-                            .is_none_or(|t| t.elapsed() >= Duration::from_secs(60))
-                    {
-                        last_emergency_refresh = Some(Instant::now());
-                        if let Ok(loaded) = fetch_all_proxies(&base_client, &cfg).await {
-                            let rep = pool.replace_proxies(loaded.proxies);
-                            debug!(?rep, "emergency proxy list refresh finished");
-                        }
-                    }
-                    if pool.untested_count() == 0 && pool.healthy_count() == 0 {
-                        pool.recycle_old_dead(Duration::from_secs(600));
-                    }
-                    if pool.untested_count() > 0 {
-                        run_probe_wave(
-                            &pool,
-                            &probe_client,
-                            &pool_client,
-                            &sessions,
-                            &endpoints,
-                        )
-                        .await;
-                    }
-                }
-            }
-        })
+        tokio::spawn(run_prober_loop(
+            pool,
+            base_client,
+            probe_client,
+            pool_client,
+            sessions,
+            endpoints,
+            rx,
+            DEAD_RECHECK_MIN_GAP,
+        ))
     };
 
     // 2. Hot-standby keep-alive warmer + periodic Stage 1 liveness re-checks
@@ -856,5 +983,255 @@ mod tests {
         probe_stage1_batch(&pool, &probe_client, vec![p2], &models_url).await;
         assert_eq!(pool.stats().cooldown, 1);
         assert_eq!(pool.stats().healthy, 1);
+    }
+
+    async fn spawn_always_healthy_opencode_pair() -> (String, String) {
+        let app = Router::new()
+            .route(
+                "/zen/v1/models",
+                get(|| async {
+                    r#"{"object":"list","data":[{"id":"big-pickle","type":"chat","cost":{"text":{"input":{"price":0},"output":{"price":0}}}}]}"#
+                }),
+            )
+            .route(
+                "/inference/v1/chat/completions",
+                post(|| async {
+                    (
+                        StatusCode::OK,
+                        [(CONTENT_TYPE, "text/event-stream")],
+                        "data: {\"choices\":[{\"delta\":{\"content\":\"ok\"}}]}\n\ndata: [DONE]\n\n",
+                    )
+                }),
+            );
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
+        (
+            format!("http://{addr}/zen/v1/models"),
+            format!("http://{addr}/inference/v1/chat/completions"),
+        )
+    }
+
+    async fn spawn_scripted_socks5_proxy(
+        id: usize,
+        visits: Arc<std::sync::Mutex<Vec<usize>>>,
+        recover_on_attempt: Option<usize>,
+    ) -> std::net::SocketAddr {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let attempts = Arc::new(AtomicUsize::new(0));
+        tokio::spawn(async move {
+            while let Ok((mut client, _)) = listener.accept().await {
+                let visits = Arc::clone(&visits);
+                let attempts = Arc::clone(&attempts);
+                tokio::spawn(async move {
+                    let attempt = attempts.fetch_add(1, Ordering::Relaxed) + 1;
+                    visits.lock().unwrap().push(id);
+
+                    let mut hdr = [0u8; 2];
+                    if client.read_exact(&mut hdr).await.is_err() {
+                        return;
+                    }
+                    let mut methods = vec![0u8; hdr[1] as usize];
+                    if client.read_exact(&mut methods).await.is_err() {
+                        return;
+                    }
+
+                    let healthy = recover_on_attempt.is_some_and(|n| attempt >= n);
+                    if !healthy {
+                        let _ = client.write_all(&[0x05, 0xFF]).await;
+                        return;
+                    }
+
+                    if client.write_all(&[0x05, 0x00]).await.is_err() {
+                        return;
+                    }
+                    let mut req = [0u8; 4];
+                    if client.read_exact(&mut req).await.is_err() {
+                        return;
+                    }
+                    let host = match req[3] {
+                        0x01 => {
+                            let mut ip = [0u8; 4];
+                            if client.read_exact(&mut ip).await.is_err() {
+                                return;
+                            }
+                            std::net::IpAddr::V4(std::net::Ipv4Addr::from(ip)).to_string()
+                        }
+                        0x03 => {
+                            let Ok(len) = client.read_u8().await else {
+                                return;
+                            };
+                            let mut d = vec![0u8; len as usize];
+                            if client.read_exact(&mut d).await.is_err() {
+                                return;
+                            }
+                            let Ok(s) = String::from_utf8(d) else {
+                                return;
+                            };
+                            s
+                        }
+                        _ => return,
+                    };
+                    let mut pb = [0u8; 2];
+                    if client.read_exact(&mut pb).await.is_err() {
+                        return;
+                    }
+                    let port = u16::from_be_bytes(pb);
+                    if let Ok(mut remote) = TcpStream::connect((host.as_str(), port)).await {
+                        let _ = client
+                            .write_all(&[0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0])
+                            .await;
+                        let _ = tokio::io::copy_bidirectional(&mut client, &mut remote).await;
+                    }
+                });
+            }
+        });
+        addr
+    }
+
+    fn collapse_consecutive(visits: &[usize]) -> Vec<usize> {
+        let mut out = Vec::new();
+        for &v in visits {
+            if out.last().copied() != Some(v) {
+                out.push(v);
+            }
+        }
+        out
+    }
+
+    #[tokio::test]
+    async fn recheck_dead_loops_oldest_to_newest_and_promotes_recovered_proxy() {
+        let (models_url, chat_url) = spawn_always_healthy_opencode_pair().await;
+        let visits = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let addr1 = spawn_scripted_socks5_proxy(1, Arc::clone(&visits), Some(3)).await;
+        let addr2 = spawn_scripted_socks5_proxy(2, Arc::clone(&visits), Some(2)).await;
+        let addr3 = spawn_scripted_socks5_proxy(3, Arc::clone(&visits), None).await;
+
+        let mut cfg = ProxyPoolConfig {
+            enabled: true,
+            ..Default::default()
+        };
+        cfg.health_check.concurrency = 1;
+        cfg.health_check.target_healthy = 2;
+        cfg.health_check.hot_standby_count = 0;
+        cfg.health_check.recheck_dead = true;
+
+        let pool = ProxyPool::new(
+            cfg,
+            vec![
+                ParsedProxy::parse_explicit(&format!("socks5h://{addr1}"), true).unwrap(),
+                ParsedProxy::parse_explicit(&format!("socks5h://{addr2}"), true).unwrap(),
+                ParsedProxy::parse_explicit(&format!("socks5h://{addr3}"), true).unwrap(),
+            ],
+            None,
+        );
+        let base_client = build_probe_client(5).unwrap();
+        let probe_client = build_probe_client(5).unwrap();
+        let pool_client = build_pool_client(4, 30).unwrap();
+        let sessions = Arc::new(SessionManager::new(Duration::from_secs(7200)));
+        let endpoints = ProbeEndpoints::for_tests(models_url, chat_url);
+        let (shutdown_tx, shutdown_rx) = watch::channel(false);
+
+        let handle = tokio::spawn(run_prober_loop(
+            Arc::clone(&pool),
+            base_client,
+            probe_client,
+            pool_client,
+            sessions,
+            endpoints,
+            shutdown_rx,
+            Duration::from_millis(10),
+        ));
+
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(10);
+        while pool.healthy_count() < 2 {
+            assert!(
+                tokio::time::Instant::now() < deadline,
+                "timed out waiting for dead proxies to recover; stats={:?}, visits={:?}",
+                pool.stats(),
+                visits.lock().unwrap()
+            );
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+
+        let _ = shutdown_tx.send(true);
+        let _ = handle.await;
+
+        let stats = pool.stats();
+        assert_eq!(stats.healthy, 2);
+        assert_eq!(stats.dead, 1);
+
+        let collapsed = collapse_consecutive(&visits.lock().unwrap());
+        assert_eq!(collapsed, vec![1, 2, 3, 1, 2, 3, 1]);
+    }
+
+    #[tokio::test]
+    async fn recheck_dead_disabled_does_not_reprobe_dead_proxies() {
+        let (models_url, chat_url) = spawn_always_healthy_opencode_pair().await;
+        let visits = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let addr1 = spawn_scripted_socks5_proxy(1, Arc::clone(&visits), Some(1)).await;
+        let addr2 = spawn_scripted_socks5_proxy(2, Arc::clone(&visits), None).await;
+        let addr3 = spawn_scripted_socks5_proxy(3, Arc::clone(&visits), None).await;
+
+        let mut cfg = ProxyPoolConfig {
+            enabled: true,
+            ..Default::default()
+        };
+        cfg.health_check.concurrency = 1;
+        cfg.health_check.target_healthy = 3;
+        cfg.health_check.hot_standby_count = 0;
+        cfg.health_check.recheck_dead = false;
+
+        let pool = ProxyPool::new(
+            cfg,
+            vec![
+                ParsedProxy::parse_explicit(&format!("socks5h://{addr1}"), true).unwrap(),
+                ParsedProxy::parse_explicit(&format!("socks5h://{addr2}"), true).unwrap(),
+                ParsedProxy::parse_explicit(&format!("socks5h://{addr3}"), true).unwrap(),
+            ],
+            None,
+        );
+        let base_client = build_probe_client(5).unwrap();
+        let probe_client = build_probe_client(5).unwrap();
+        let pool_client = build_pool_client(4, 30).unwrap();
+        let sessions = Arc::new(SessionManager::new(Duration::from_secs(7200)));
+        let endpoints = ProbeEndpoints::for_tests(models_url, chat_url);
+        let (shutdown_tx, shutdown_rx) = watch::channel(false);
+
+        let handle = tokio::spawn(run_prober_loop(
+            Arc::clone(&pool),
+            base_client,
+            probe_client,
+            pool_client,
+            sessions,
+            endpoints,
+            shutdown_rx,
+            Duration::from_millis(10),
+        ));
+
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(10);
+        while pool.untested_count() > 0 {
+            assert!(
+                tokio::time::Instant::now() < deadline,
+                "timed out waiting for initial wave; stats={:?}",
+                pool.stats()
+            );
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        tokio::time::sleep(Duration::from_millis(80)).await;
+
+        let _ = shutdown_tx.send(true);
+        let _ = handle.await;
+
+        let stats = pool.stats();
+        assert_eq!(stats.healthy, 1);
+        assert_eq!(stats.dead, 2);
+
+        let collapsed = collapse_consecutive(&visits.lock().unwrap());
+        assert_eq!(collapsed, vec![1, 2, 3]);
     }
 }

@@ -40,6 +40,7 @@ pub enum ProxyState {
     },
     Dead {
         failed_at: Instant,
+        dead_seq: u64,
         last_error: String,
     },
 }
@@ -98,6 +99,7 @@ pub struct ReplaceSummary {
 #[derive(Debug)]
 struct PoolInner {
     next_id: u64,
+    next_dead_seq: u64,
     entries: HashMap<ProxyId, ProxyEntry>,
     key_to_id: HashMap<ProxyKey, ProxyId>,
     order: Vec<ProxyId>,
@@ -129,6 +131,7 @@ impl ProxyPool {
             bridge,
             inner: Mutex::new(PoolInner {
                 next_id: 1,
+                next_dead_seq: 1,
                 entries: HashMap::new(),
                 key_to_id: HashMap::new(),
                 order: Vec::new(),
@@ -516,6 +519,10 @@ impl ProxyPool {
                 ProxyState::Cooldown { prev_rtt_ms, .. } => prev_rtt_ms,
                 _ => None,
             };
+            if matches!(entry.state, ProxyState::Dead { .. }) {
+                entry.consecutive_failures = 0;
+                entry.backoff_level = 0;
+            }
             entry.state = ProxyState::Cooldown {
                 until: now + duration,
                 reason,
@@ -541,6 +548,7 @@ impl ProxyPool {
         let need_probe = {
             let mut guard = self.inner.lock().expect("ProxyPool lock");
             guard.probing_inflight.remove(&id);
+            let next_dead_seq = guard.next_dead_seq;
             let Some(entry) = guard.entries.get_mut(&id) else {
                 return;
             };
@@ -548,11 +556,14 @@ impl ProxyPool {
             entry.backoff_level = entry.backoff_level.saturating_add(1);
             entry.last_checked = Some(now);
 
+            let mut became_dead = false;
             if entry.consecutive_failures >= self.cfg.selection.max_consecutive_failures {
                 entry.state = ProxyState::Dead {
                     failed_at: now,
+                    dead_seq: next_dead_seq,
                     last_error: detail,
                 };
+                became_dead = true;
             } else {
                 let shift = entry.backoff_level.saturating_sub(1).min(10);
                 let delay_secs = self
@@ -567,6 +578,9 @@ impl ProxyPool {
                     prev_rtt_ms: None,
                     last_error: detail,
                 };
+            }
+            if became_dead {
+                guard.next_dead_seq = guard.next_dead_seq.saturating_add(1);
             }
 
             if guard.active_proxy == Some(id) {
@@ -586,14 +600,17 @@ impl ProxyPool {
         let need_probe = {
             let mut guard = self.inner.lock().expect("ProxyPool lock");
             guard.probing_inflight.remove(&id);
+            let dead_seq = guard.next_dead_seq;
             let Some(entry) = guard.entries.get_mut(&id) else {
                 return;
             };
             entry.state = ProxyState::Dead {
                 failed_at: now,
+                dead_seq,
                 last_error: detail.into(),
             };
             entry.last_checked = Some(now);
+            guard.next_dead_seq = guard.next_dead_seq.saturating_add(1);
             if guard.active_proxy == Some(id) {
                 guard.active_proxy = None;
                 self.switches_total.fetch_add(1, Ordering::Relaxed);
@@ -763,6 +780,72 @@ impl ProxyPool {
             .values()
             .filter(|e| matches!(e.state, ProxyState::Untested))
             .count()
+    }
+
+    pub fn dead_count(&self) -> usize {
+        let guard = self.inner.lock().expect("ProxyPool lock");
+        guard
+            .entries
+            .values()
+            .filter(|e| matches!(e.state, ProxyState::Dead { .. }))
+            .count()
+    }
+
+    /// Take up to `max` `Dead` proxies not currently in flight, ordered from first-tested
+    /// to last-tested (`dead_seq` ascending).
+    pub fn take_dead_batch(&self, max: usize) -> Vec<ProxyEndpoint> {
+        if max == 0 {
+            return Vec::new();
+        }
+        let mut guard = self.inner.lock().expect("ProxyPool lock");
+        let mut candidates: Vec<(u64, ProxyId, ProxyEndpoint)> = guard
+            .entries
+            .iter()
+            .filter_map(|(&id, entry)| {
+                if guard.probing_inflight.contains(&id) {
+                    return None;
+                }
+                match entry.state {
+                    ProxyState::Dead { dead_seq, .. } => {
+                        Some((dead_seq, id, entry.endpoint.clone()))
+                    }
+                    _ => None,
+                }
+            })
+            .collect();
+        candidates.sort_by_key(|(dead_seq, id, _)| (*dead_seq, *id));
+        candidates.truncate(max);
+        let batch: Vec<ProxyEndpoint> = candidates.into_iter().map(|(_, _, ep)| ep).collect();
+        for ep in &batch {
+            guard.probing_inflight.insert(ep.id);
+        }
+        batch
+    }
+
+    /// Return how long to wait before re-checking the oldest non-in-flight `Dead` proxy
+    /// so it is at least `min_gap` old since its last failure, or `None` if none are idle.
+    pub fn next_dead_recheck_delay(&self, min_gap: Duration) -> Option<Duration> {
+        let guard = self.inner.lock().expect("ProxyPool lock");
+        let oldest = guard
+            .entries
+            .iter()
+            .filter_map(|(&id, entry)| {
+                if guard.probing_inflight.contains(&id) {
+                    return None;
+                }
+                match entry.state {
+                    ProxyState::Dead {
+                        failed_at,
+                        dead_seq,
+                        ..
+                    } => Some((dead_seq, id, failed_at)),
+                    _ => None,
+                }
+            })
+            .min_by_key(|(dead_seq, id, _)| (*dead_seq, *id));
+        oldest.map(|(_, _, failed_at)| {
+            min_gap.saturating_sub(Instant::now().saturating_duration_since(failed_at))
+        })
     }
 
     /// Check whether `id` is currently among the top `n` lowest-latency healthy proxies.
@@ -1249,5 +1332,56 @@ mod tests {
             .await;
         assert!(!ready);
         assert!(t0.elapsed() >= Duration::from_millis(70));
+    }
+
+    #[test]
+    fn take_dead_batch_orders_first_tested_to_last_and_rotates_on_redead() {
+        let mut cfg = ProxyPoolConfig {
+            enabled: true,
+            ..Default::default()
+        };
+        cfg.selection.max_consecutive_failures = 2;
+        let pool = ProxyPool::new(
+            cfg,
+            vec![
+                p("socks5://1.1.1.1:1080"),
+                p("socks5://2.2.2.2:1080"),
+                p("socks5://3.3.3.3:1080"),
+                p("socks5://4.4.4.4:1080"),
+            ],
+            None,
+        );
+
+        // Mark dead in non-ID order: [3, 1, 4, 2] (mixing report_dead and report_transport_error).
+        pool.report_dead(ProxyId(3), "dead 3");
+        pool.report_transport_error(ProxyId(1), "err 1a");
+        pool.report_transport_error(ProxyId(1), "err 1b");
+        pool.report_dead(ProxyId(4), "dead 4");
+        pool.report_dead(ProxyId(2), "dead 2");
+
+        assert_eq!(pool.dead_count(), 4);
+
+        let batch1: Vec<ProxyId> = pool.take_dead_batch(2).into_iter().map(|e| e.id).collect();
+        assert_eq!(batch1, vec![ProxyId(3), ProxyId(1)]);
+
+        // Second call skips in-flight [3, 1] and returns [4, 2].
+        let batch2: Vec<ProxyId> = pool.take_dead_batch(2).into_iter().map(|e| e.id).collect();
+        assert_eq!(batch2, vec![ProxyId(4), ProxyId(2)]);
+
+        // No idle dead proxies remain.
+        assert!(pool.take_dead_batch(2).is_empty());
+
+        // Resolve outcomes: 3 dead again, 1 healthy, 4 dead again, 2 rate-limited.
+        pool.report_dead(ProxyId(3), "still dead 3");
+        pool.report_success(ProxyId(1), 25);
+        pool.report_dead(ProxyId(4), "still dead 4");
+        pool.report_rate_limited(ProxyId(2), Some(Duration::from_secs(60)), "429");
+
+        assert_eq!(pool.dead_count(), 2);
+        assert_eq!(pool.healthy_count(), 1);
+
+        // Remaining dead proxies are returned in rotated FIFO order [3, 4].
+        let next_batch: Vec<ProxyId> = pool.take_dead_batch(2).into_iter().map(|e| e.id).collect();
+        assert_eq!(next_batch, vec![ProxyId(3), ProxyId(4)]);
     }
 }

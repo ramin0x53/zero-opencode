@@ -67,7 +67,6 @@ async fn fetch_one_source(
     client: &Client,
     url: &str,
     default_protocol: Option<ProxyProtocol>,
-    allow_private: bool,
 ) -> anyhow::Result<Vec<ParsedProxy>> {
     let resp = client
         .get(url)
@@ -91,7 +90,7 @@ async fn fetch_one_source(
     }
 
     let text = String::from_utf8_lossy(&body);
-    Ok(parse_proxy_list(&text, default_protocol, allow_private))
+    Ok(parse_proxy_list(&text, default_protocol, true))
 }
 
 fn shuffle_in_place<T>(items: &mut [T]) {
@@ -132,11 +131,10 @@ pub async fn fetch_all_proxies(
     }
 
     let sources_total = source_jobs.len();
-    let allow_private = cfg.allow_private_proxies;
 
     let results = futures_util::stream::iter(source_jobs.into_iter().map(
         |(url, default_proto)| async move {
-            let res = fetch_one_source(base_client, &url, default_proto, allow_private).await;
+            let res = fetch_one_source(base_client, &url, default_proto).await;
             (url, res)
         },
     ))
@@ -229,7 +227,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn fetches_deduplicates_filters_private_and_keeps_all_while_tolerating_failures() {
+    async fn fetches_deduplicates_and_keeps_all_including_private_while_tolerating_failures() {
         let base = spawn_mock_sources_server().await;
         let client = build_opencode_client(None, 10).unwrap();
 
@@ -242,7 +240,6 @@ mod tests {
                 mixed: vec![format!("{base}/mixed.json")],
             },
             static_proxies: vec!["socks5://127.0.0.1:9999".to_string()],
-            allow_private_proxies: false,
             ..Default::default()
         };
 
@@ -251,15 +248,20 @@ mod tests {
         assert_eq!(result.sources_succeeded, 3);
         assert_eq!(result.sources_failed, 1);
         assert_eq!(result.static_count, 1);
-        assert_eq!(result.remote_count, 5);
-        // 1 static (127.0.0.1:9999) + all 5 unique public remote endpoints:
-        // socks5h://1.1.1.1:1080, socks5h://2.2.2.2:1080, socks4a://3.3.3.3:4145,
-        // socks4a://1.1.1.1:1080, http://4.4.4.4:8080
-        assert_eq!(result.proxies.len(), 6);
+        assert_eq!(result.remote_count, 6);
+        // 1 static (127.0.0.1:9999) + all 6 unique remote endpoints including private 127.0.0.1:1080:
+        // socks5h://1.1.1.1:1080, socks5h://2.2.2.2:1080, socks5h://127.0.0.1:1080,
+        // socks4a://3.3.3.3:4145, socks4a://1.1.1.1:1080, http://4.4.4.4:8080
+        assert_eq!(result.proxies.len(), 7);
         assert_eq!(result.proxies[0].host, "127.0.0.1");
         assert!(result.proxies[0].is_static);
-        // Remote 127.0.0.1:1080 was filtered out
-        assert!(!result.proxies.iter().any(|p| p.port == 1080 && p.host == "127.0.0.1"));
+        // Remote 127.0.0.1:1080 is now kept as a non-static entry
+        assert!(
+            result
+                .proxies
+                .iter()
+                .any(|p| p.port == 1080 && p.host == "127.0.0.1" && !p.is_static)
+        );
     }
 
     #[tokio::test]
@@ -291,7 +293,6 @@ mod tests {
                 socks5: vec![format!("{base}/a.txt"), format!("{base}/b.txt")],
                 ..Default::default()
             },
-            allow_private_proxies: false,
             ..Default::default()
         };
 

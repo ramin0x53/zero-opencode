@@ -100,7 +100,6 @@ pub struct ProxyPoolConfig {
     pub sources: ProxySourcesConfig,
     pub static_proxies: Vec<String>,
     pub refresh_interval_secs: u64,
-    pub allow_private_proxies: bool,
     pub health_check: ProxyHealthCheckConfig,
     pub selection: ProxySelectionConfig,
 }
@@ -112,7 +111,6 @@ impl Default for ProxyPoolConfig {
             sources: ProxySourcesConfig::default(),
             static_proxies: Vec::new(),
             refresh_interval_secs: 900,
-            allow_private_proxies: false,
             health_check: ProxyHealthCheckConfig::default(),
             selection: ProxySelectionConfig::default(),
         }
@@ -149,6 +147,7 @@ pub struct ProxyHealthCheckConfig {
     pub hot_standby_count: usize,
     pub target_healthy: usize,
     pub startup_wait_secs: u64,
+    pub recheck_dead: bool,
 }
 
 impl Default for ProxyHealthCheckConfig {
@@ -161,6 +160,7 @@ impl Default for ProxyHealthCheckConfig {
             hot_standby_count: 3,
             target_healthy: 20,
             startup_wait_secs: 15,
+            recheck_dead: false,
         }
     }
 }
@@ -540,6 +540,8 @@ opencode:
       http: ["https://example.com/http.txt"]
     static_proxies:
       - "socks5h://user:pass@10.0.0.2:1080"
+    health_check:
+      recheck_dead: true
     selection:
       strategy: "round_robin"
       failover_timeout_secs: null
@@ -553,6 +555,7 @@ opencode:
         assert_eq!(pp.selection.failover_timeout_secs, None);
         assert_eq!(pp.selection.hedge_delay_ms, None);
         assert_eq!(pp.health_check.concurrency, 25);
+        assert!(pp.health_check.recheck_dead);
     }
 
     #[test]
@@ -575,10 +578,16 @@ opencode:
             )
             .is_err()
         );
-        // unknown removed field max_proxies
+        // unknown removed fields max_proxies / allow_private_proxies
         assert!(
             AppConfig::from_yaml_str(
                 "opencode:\n  proxy_pool:\n    max_proxies: 2000\n"
+            )
+            .is_err()
+        );
+        assert!(
+            AppConfig::from_yaml_str(
+                "opencode:\n  proxy_pool:\n    allow_private_proxies: false\n"
             )
             .is_err()
         );

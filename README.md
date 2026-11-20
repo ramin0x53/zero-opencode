@@ -92,7 +92,6 @@ opencode:
       mixed: []              # URLs where each line/item carries an explicit scheme
     static_proxies: []       # Optional inline proxy URLs (scheme://[user:pass@]host:port)
     refresh_interval_secs: 900
-    allow_private_proxies: false
     health_check:
       concurrency: 25
       timeout_secs: 6
@@ -101,6 +100,7 @@ opencode:
       hot_standby_count: 3
       target_healthy: 20
       startup_wait_secs: 15
+      recheck_dead: false    # Continuously re-check dead proxies (oldest-tested first) when untested are exhausted
     selection:
       strategy: "sticky"     # sticky | lowest_latency | round_robin
       connect_timeout_secs: 4
