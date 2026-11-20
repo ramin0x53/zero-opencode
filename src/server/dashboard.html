@@ -4,54 +4,84 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <title>zero-opencode Dashboard</title>
+  <script nonce="__CSP_NONCE__">
+    try {
+      var savedScheme = localStorage.getItem("color-scheme");
+      if (savedScheme === "light" || savedScheme === "dark") {
+        document.querySelector('meta[name="color-scheme"]').content = savedScheme;
+      }
+    } catch (_) {}
+  </script>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23090c10'/%3E%3Ccircle cx='16' cy='16' r='8' fill='none' stroke='%2338bdf8' stroke-width='2.5'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%2334d399'/%3E%3C/svg%3E">
+  <title>zero-opencode · Control Plane</title>
   <style nonce="__CSP_NONCE__">
     :root {
-      --bg-light: #f4f6f9;
+      --in-oklab: ;
+
+      /* Palette tokens: Light (Porcelain Studio) & Dark (Obsidian Telemetry) */
+      --bg-light: #f4f7fb;
+      --bg-glow-light: #dbeafe;
       --surface-light: #ffffff;
-      --surface-2-light: #eef2f6;
-      --border-light: #d7dee8;
-      --text-light: #111827;
+      --surface-2-light: #eef2f7;
+      --surface-3-light: #e4eaf2;
+      --border-light: #d7e0eb;
+      --border-strong-light: #bcc8d8;
+      --text-light: #0f172a;
       --muted-light: #526071;
-      --accent-light: #0d5bd9;
+      --accent-light: #0284c7;
+      --accent-hover-light: #0369a1;
       --accent-text-light: #ffffff;
       --ok-bg-light: #dcfce7;
-      --ok-text-light: #166534;
+      --ok-text-light: #15803d;
       --warn-bg-light: #fef3c7;
-      --warn-text-light: #92400e;
+      --warn-text-light: #a16207;
       --err-bg-light: #fee2e2;
-      --err-text-light: #991b1b;
-      --neutral-bg-light: #e5e7eb;
-      --neutral-text-light: #374151;
-      --scroll-track-light: #e9edf3;
-      --scroll-thumb-light: #7c8798;
+      --err-text-light: #b91c1c;
+      --neutral-bg-light: #e2e8f0;
+      --neutral-text-light: #334155;
+      --topbar-light: rgb(255 255 255 / 0.82);
+      --shadow-card-light: 0 1px 2px rgb(15 23 42 / 0.05), 0 8px 24px -8px rgb(15 23 42 / 0.08);
+      --shadow-pop-light: 0 12px 32px -4px rgb(15 23 42 / 0.16), 0 4px 12px -2px rgb(15 23 42 / 0.08);
+      --scroll-track-light: #eef2f7;
+      --scroll-thumb-light: #94a3b8;
 
-      --bg-dark: #0d1117;
-      --surface-dark: #161b22;
-      --surface-2-dark: #1f2630;
-      --border-dark: #30363d;
-      --text-dark: #e6edf3;
-      --muted-dark: #8b949e;
-      --accent-dark: #58a6ff;
-      --accent-text-dark: #09131f;
-      --ok-bg-dark: #123322;
-      --ok-text-dark: #56d364;
-      --warn-bg-dark: #3b2a09;
-      --warn-text-dark: #e3b341;
-      --err-bg-dark: #3c1618;
-      --err-text-dark: #ff7b72;
-      --neutral-bg-dark: #282e37;
-      --neutral-text-dark: #b1bac4;
-      --scroll-track-dark: #161b22;
-      --scroll-thumb-dark: #6e7681;
+      --bg-dark: #090c10;
+      --bg-glow-dark: #0c2d48;
+      --surface-dark: #11161e;
+      --surface-2-dark: #171e29;
+      --surface-3-dark: #1f2836;
+      --border-dark: #232b37;
+      --border-strong-dark: #354152;
+      --text-dark: #f0f4f8;
+      --muted-dark: #8596ab;
+      --accent-dark: #38bdf8;
+      --accent-hover-dark: #7dd3fc;
+      --accent-text-dark: #06131f;
+      --ok-bg-dark: #0e2e22;
+      --ok-text-dark: #34d399;
+      --warn-bg-dark: #322409;
+      --warn-text-dark: #fbbf24;
+      --err-bg-dark: #38161a;
+      --err-text-dark: #f87171;
+      --neutral-bg-dark: #212936;
+      --neutral-text-dark: #a6b4c7;
+      --topbar-dark: rgb(9 12 16 / 0.82);
+      --shadow-card-dark: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 8px 24px -10px rgb(0 0 0 / 0.55);
+      --shadow-pop-dark: 0 20px 44px -8px rgb(0 0 0 / 0.72), 0 0 0 1px rgb(255 255 255 / 0.06);
+      --scroll-track-dark: #11161e;
+      --scroll-thumb-dark: #475569;
 
       --bg: var(--bg-light);
+      --bg-glow: var(--bg-glow-light);
       --surface: var(--surface-light);
       --surface-2: var(--surface-2-light);
+      --surface-3: var(--surface-3-light);
       --border: var(--border-light);
+      --border-strong: var(--border-strong-light);
       --text: var(--text-light);
       --muted: var(--muted-light);
       --accent: var(--accent-light);
+      --accent-hover: var(--accent-hover-light);
       --accent-text: var(--accent-text-light);
       --ok-bg: var(--ok-bg-light);
       --ok-text: var(--ok-text-light);
@@ -61,6 +91,9 @@
       --err-text: var(--err-text-light);
       --neutral-bg: var(--neutral-bg-light);
       --neutral-text: var(--neutral-text-light);
+      --topbar-bg: var(--topbar-light);
+      --shadow-card: var(--shadow-card-light);
+      --shadow-pop: var(--shadow-pop-light);
       --scroll-track: var(--scroll-track-light);
       --scroll-thumb: var(--scroll-thumb-light);
 
@@ -69,15 +102,33 @@
       scrollbar-color: var(--scroll-thumb) var(--scroll-track);
     }
 
-    @media (prefers-color-scheme: dark) {
+    @supports (background: linear-gradient(in oklab, white, black)) {
       :root {
+        --in-oklab: in oklab;
+      }
+    }
+
+    :root:has(> head > meta[name="color-scheme"][content="dark"]) {
+      color-scheme: dark;
+    }
+
+    :root:has(> head > meta[name="color-scheme"][content="light"]) {
+      color-scheme: light;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not(:has(> head > meta[name="color-scheme"][content="light"])) {
         --bg: var(--bg-dark);
+        --bg-glow: var(--bg-glow-dark);
         --surface: var(--surface-dark);
         --surface-2: var(--surface-2-dark);
+        --surface-3: var(--surface-3-dark);
         --border: var(--border-dark);
+        --border-strong: var(--border-strong-dark);
         --text: var(--text-dark);
         --muted: var(--muted-dark);
         --accent: var(--accent-dark);
+        --accent-hover: var(--accent-hover-dark);
         --accent-text: var(--accent-text-dark);
         --ok-bg: var(--ok-bg-dark);
         --ok-text: var(--ok-text-dark);
@@ -87,20 +138,55 @@
         --err-text: var(--err-text-dark);
         --neutral-bg: var(--neutral-bg-dark);
         --neutral-text: var(--neutral-text-dark);
+        --topbar-bg: var(--topbar-dark);
+        --shadow-card: var(--shadow-card-dark);
+        --shadow-pop: var(--shadow-pop-dark);
         --scroll-track: var(--scroll-track-dark);
         --scroll-thumb: var(--scroll-thumb-dark);
       }
     }
 
+    :root:has(> head > meta[name="color-scheme"][content="dark"]) {
+      --bg: var(--bg-dark);
+      --bg-glow: var(--bg-glow-dark);
+      --surface: var(--surface-dark);
+      --surface-2: var(--surface-2-dark);
+      --surface-3: var(--surface-3-dark);
+      --border: var(--border-dark);
+      --border-strong: var(--border-strong-dark);
+      --text: var(--text-dark);
+      --muted: var(--muted-dark);
+      --accent: var(--accent-dark);
+      --accent-hover: var(--accent-hover-dark);
+      --accent-text: var(--accent-text-dark);
+      --ok-bg: var(--ok-bg-dark);
+      --ok-text: var(--ok-text-dark);
+      --warn-bg: var(--warn-bg-dark);
+      --warn-text: var(--warn-text-dark);
+      --err-bg: var(--err-bg-dark);
+      --err-text: var(--err-text-dark);
+      --neutral-bg: var(--neutral-bg-dark);
+      --neutral-text: var(--neutral-text-dark);
+      --topbar-bg: var(--topbar-dark);
+      --shadow-card: var(--shadow-card-dark);
+      --shadow-pop: var(--shadow-pop-dark);
+      --scroll-track: var(--scroll-track-dark);
+      --scroll-thumb: var(--scroll-thumb-dark);
+    }
+
     @supports (color: light-dark(white, black)) {
       :root {
         --bg: light-dark(var(--bg-light), var(--bg-dark));
+        --bg-glow: light-dark(var(--bg-glow-light), var(--bg-glow-dark));
         --surface: light-dark(var(--surface-light), var(--surface-dark));
         --surface-2: light-dark(var(--surface-2-light), var(--surface-2-dark));
+        --surface-3: light-dark(var(--surface-3-light), var(--surface-3-dark));
         --border: light-dark(var(--border-light), var(--border-dark));
+        --border-strong: light-dark(var(--border-strong-light), var(--border-strong-dark));
         --text: light-dark(var(--text-light), var(--text-dark));
         --muted: light-dark(var(--muted-light), var(--muted-dark));
         --accent: light-dark(var(--accent-light), var(--accent-dark));
+        --accent-hover: light-dark(var(--accent-hover-light), var(--accent-hover-dark));
         --accent-text: light-dark(var(--accent-text-light), var(--accent-text-dark));
         --ok-bg: light-dark(var(--ok-bg-light), var(--ok-bg-dark));
         --ok-text: light-dark(var(--ok-text-light), var(--ok-text-dark));
@@ -110,15 +196,41 @@
         --err-text: light-dark(var(--err-text-light), var(--err-text-dark));
         --neutral-bg: light-dark(var(--neutral-bg-light), var(--neutral-bg-dark));
         --neutral-text: light-dark(var(--neutral-text-light), var(--neutral-text-dark));
+        --topbar-bg: light-dark(var(--topbar-light), var(--topbar-dark));
+        --shadow-card: light-dark(var(--shadow-card-light), var(--shadow-card-dark));
+        --shadow-pop: light-dark(var(--shadow-pop-light), var(--shadow-pop-dark));
         --scroll-track: light-dark(var(--scroll-track-light), var(--scroll-track-dark));
         --scroll-thumb: light-dark(var(--scroll-thumb-light), var(--scroll-thumb-dark));
       }
     }
 
-    @supports not (scrollbar-color: auto) {
-      .table-wrapper {
-        scrollbar-width: auto;
+    /* Two-state theme button icon visibility driven purely by <meta> + OS media query */
+    .theme-btn .icon-sun,
+    .theme-btn .icon-moon {
+      display: none;
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root:not(:has(> head > meta[name="color-scheme"][content="dark"])) .theme-btn .icon-moon {
+        display: inline-flex;
       }
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not(:has(> head > meta[name="color-scheme"][content="light"])) .theme-btn .icon-sun {
+        display: inline-flex;
+      }
+    }
+
+    :root:has(> head > meta[name="color-scheme"][content="light"]) .theme-btn .icon-moon {
+      display: inline-flex;
+    }
+
+    :root:has(> head > meta[name="color-scheme"][content="dark"]) .theme-btn .icon-sun {
+      display: inline-flex;
+    }
+
+    @supports not (scrollbar-color: auto) {
       .table-wrapper::-webkit-scrollbar {
         width: 10px;
         height: 10px;
@@ -142,11 +254,14 @@
 
     body {
       margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background-color: var(--bg);
+      background-image: radial-gradient(ellipse 85% 42% at 50% -12% var(--in-oklab), color-mix(in oklab, var(--bg-glow) 60%, transparent), transparent);
+      background-attachment: fixed;
       color: var(--text);
       line-height: 1.5;
       min-block-size: 100dvh;
+      -webkit-font-smoothing: antialiased;
     }
 
     .sr-only {
@@ -156,63 +271,263 @@
       padding: 0;
       margin: -1px;
       overflow: hidden;
-      clip: rect(0, 0, 0, 0);
+      clip-path: inset(50%);
       white-space: nowrap;
       border: 0;
     }
 
     .mono {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 0.875em;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 0.86em;
     }
 
     .tabular {
       font-variant-numeric: tabular-nums;
     }
 
+    .svg-icon {
+      inline-size: 1rem;
+      block-size: 1rem;
+      flex: none;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    .svg-icon-sm {
+      inline-size: 0.85rem;
+      block-size: 0.85rem;
+    }
+
+    /* Buttons & Inputs */
+    button {
+      font: inherit;
+      cursor: pointer;
+      border-radius: 0.55rem;
+      border: 1px solid transparent;
+      padding: 0.48rem 0.85rem;
+      font-weight: 600;
+      font-size: 0.86rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      white-space: nowrap;
+      transition: background-color 0.14s ease, border-color 0.14s ease, color 0.14s ease, transform 0.1s ease, opacity 0.14s ease;
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: var(--accent-text);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-hover);
+    }
+
+    .btn-secondary {
+      background: var(--surface-2);
+      color: var(--text);
+      border-color: var(--border);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: var(--surface-3);
+      border-color: var(--border-strong);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      border-color: var(--border);
+      padding: 0.42rem 0.72rem;
+    }
+
+    .btn-ghost:hover:not(:disabled) {
+      background: var(--surface-2);
+      color: var(--text);
+      border-color: var(--border-strong);
+    }
+
+    .btn-icon {
+      padding: 0.42rem;
+      min-inline-size: 2.1rem;
+      min-block-size: 2.1rem;
+    }
+
+    .copy-mini {
+      padding: 0.22rem 0.42rem;
+      font-size: 0.75rem;
+      border-radius: 0.4rem;
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid transparent;
+      min-inline-size: 1.65rem;
+      min-block-size: 1.65rem;
+    }
+
+    .copy-mini:hover {
+      background: var(--surface-3);
+      border-color: var(--border);
+      color: var(--text);
+    }
+
+    .input {
+      inline-size: 100%;
+      padding: 0.55rem 0.78rem;
+      border: 1px solid var(--border);
+      border-radius: 0.55rem;
+      background: var(--surface-2);
+      color: var(--text);
+      font: inherit;
+      font-size: 0.92rem;
+      transition: border-color 0.14s ease, background-color 0.14s ease;
+    }
+
+    .input:hover {
+      border-color: var(--border-strong);
+    }
+
+    .input:focus-visible,
+    button:focus-visible,
+    .table-wrapper:focus-visible,
+    [role="tabpanel"]:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.2rem 0.58rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      line-height: 1.3;
+      white-space: nowrap;
+      background: var(--neutral-bg);
+      color: var(--neutral-text);
+      border: 1px solid color-mix(in oklab, currentColor 18%, transparent);
+    }
+
+    .badge-ok { background: var(--ok-bg); color: var(--ok-text); }
+    .badge-warn { background: var(--warn-bg); color: var(--warn-text); }
+    .badge-err { background: var(--err-bg); color: var(--err-text); }
+    .badge-accent {
+      background: color-mix(in oklab, var(--accent) 16%, var(--surface));
+      color: var(--accent);
+    }
+
+    .pulse-dot {
+      inline-size: 0.5rem;
+      block-size: 0.5rem;
+      border-radius: 999px;
+      background: currentColor;
+      flex: none;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .is-live .pulse-dot {
+        animation: pulse-ring 2s ease-in-out infinite;
+      }
+      @keyframes pulse-ring {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.45; transform: scale(0.8); }
+      }
+      .is-spinning svg {
+        animation: spin-rot 0.75s linear infinite;
+      }
+      @keyframes spin-rot {
+        to { transform: rotate(360deg); }
+      }
+    }
+
     /* Login View */
     .login-shell {
+      position: relative;
       display: grid;
       place-items: center;
       min-block-size: 100dvh;
       padding: 1.5rem;
+      background-image:
+        radial-gradient(circle at 50% 25% var(--in-oklab), color-mix(in oklab, var(--accent) 12%, transparent), transparent 58%),
+        radial-gradient(circle, color-mix(in oklab, var(--border-strong) 45%, transparent) 1px, transparent 1px);
+      background-size: auto, 24px 24px;
+    }
+
+    .login-corner-bar {
+      position: fixed;
+      inset-block-start: 1rem;
+      inset-inline-end: 1rem;
+      z-index: 5;
     }
 
     .login-card {
       inline-size: 100%;
-      max-inline-size: 26rem;
+      max-inline-size: 26.5rem;
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 0.875rem;
+      border-radius: 1rem;
       padding: 2rem;
-      box-shadow: 0 10px 30px rgb(0 0 0 / 0.08);
+      box-shadow: var(--shadow-pop);
+      display: grid;
+      gap: 1.25rem;
     }
 
     .login-brand {
       display: flex;
       align-items: center;
-      gap: 0.65rem;
-      margin-block-end: 0.4rem;
+      gap: 0.85rem;
     }
 
-    .brand-dot {
-      inline-size: 0.75rem;
-      block-size: 0.75rem;
-      border-radius: 999px;
-      background: var(--ok-text);
+    .brand-emblem {
+      inline-size: 2.5rem;
+      block-size: 2.5rem;
+      border-radius: 0.7rem;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg var(--in-oklab), color-mix(in oklab, var(--accent) 22%, var(--surface-2)), color-mix(in oklab, var(--ok-text) 16%, var(--surface-2)));
+      border: 1px solid color-mix(in oklab, var(--accent) 32%, var(--border));
+      color: var(--accent);
       flex: none;
     }
 
-    .login-card h1 {
+    .brand-emblem-sm {
+      inline-size: 2rem;
+      block-size: 2rem;
+      border-radius: 0.55rem;
+    }
+
+    .login-brand h1 {
       margin: 0;
-      font-size: 1.35rem;
+      font-size: 1.3rem;
       font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .login-kicker {
+      display: inline-block;
+      font-size: 0.74rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--accent);
     }
 
     .login-subtitle {
-      margin: 0 0 1.5rem;
+      margin: 0;
       color: var(--muted);
-      font-size: 0.92rem;
+      font-size: 0.9rem;
     }
 
     .login-form {
@@ -222,207 +537,299 @@
 
     .field {
       display: grid;
-      gap: 0.4rem;
+      gap: 0.38rem;
     }
 
     .field label {
-      font-size: 0.88rem;
+      font-size: 0.84rem;
       font-weight: 600;
-    }
-
-    .input, .select {
-      inline-size: 100%;
-      padding: 0.6rem 0.75rem;
-      border: 1px solid var(--border);
-      border-radius: 0.5rem;
-      background: var(--surface-2);
       color: var(--text);
-      font: inherit;
-      font-size: 0.95rem;
     }
 
-    .input:focus-visible, .select:focus-visible, button:focus-visible, .table-wrapper:focus-visible {
-      outline: 2px solid var(--accent);
-      outline-offset: 2px;
-    }
-
-    .pw-row {
+    .pw-wrap {
+      position: relative;
       display: flex;
-      gap: 0.5rem;
-      align-items: stretch;
+      align-items: center;
     }
 
-    .pw-row .input {
-      flex: 1 1 auto;
+    .pw-wrap .input {
+      padding-inline-end: 3.1rem;
     }
 
-    button {
-      font: inherit;
-      cursor: pointer;
-      border-radius: 0.5rem;
-      border: 1px solid transparent;
-      padding: 0.52rem 0.9rem;
-      font-weight: 600;
-      font-size: 0.9rem;
-      transition: opacity 0.12s ease;
+    .pw-toggle {
+      position: absolute;
+      inset-inline-end: 0.35rem;
+      padding: 0.32rem 0.55rem;
+      font-size: 0.76rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 0.4rem;
     }
 
-    button:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-
-    .btn-primary {
-      background: var(--accent);
-      color: var(--accent-text);
-    }
-
-    .btn-secondary {
-      background: var(--surface-2);
+    .pw-toggle:hover {
       color: var(--text);
-      border-color: var(--border);
+      border-color: var(--border-strong);
     }
 
-    .btn-ghost {
-      background: transparent;
-      color: var(--text);
-      border-color: var(--border);
-      padding: 0.45rem 0.75rem;
+    .login-submit-btn {
+      inline-size: 100%;
+      padding: 0.65rem 1rem;
+      font-size: 0.95rem;
+      margin-block-start: 0.25rem;
     }
 
     .alert-error {
-      padding: 0.65rem 0.8rem;
-      border-radius: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.65rem 0.85rem;
+      border-radius: 0.6rem;
       background: var(--err-bg);
       color: var(--err-text);
-      font-size: 0.88rem;
-      border: 1px solid currentColor;
+      font-size: 0.86rem;
+      font-weight: 500;
+      border: 1px solid color-mix(in oklab, var(--err-text) 35%, transparent);
     }
 
-    /* App Shell */
-    .app-shell {
-      max-inline-size: 86rem;
-      margin-inline: auto;
-      padding: 1.25rem 1.25rem 3rem;
-    }
-
+    /* Main Application Shell */
     .topbar {
+      position: relative;
+      z-index: 20;
+      background: var(--topbar-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-block-end: 1px solid var(--border);
+    }
+
+    @media (min-width: 700px) {
+      .topbar {
+        position: sticky;
+        inset-block-start: 0;
+      }
+    }
+
+    .topbar-inner {
+      max-inline-size: 88rem;
+      margin-inline: auto;
+      padding: 0.7rem 1.25rem;
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
-      gap: 0.75rem 1rem;
-      padding-block-end: 1rem;
-      border-block-end: 1px solid var(--border);
-      margin-block-end: 1.25rem;
+      gap: 0.65rem 1rem;
     }
 
-    .topbar-left {
+    .topbar-left, .topbar-right {
       display: flex;
       flex-wrap: wrap;
-      align-items: center;
-      gap: 0.65rem;
-    }
-
-    .topbar-title {
-      margin: 0;
-      font-size: 1.25rem;
-      font-weight: 700;
-      display: flex;
       align-items: center;
       gap: 0.55rem;
     }
 
-    .topbar-actions {
+    .brand-lockup {
       display: flex;
-      flex-wrap: wrap;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.6rem;
+      margin-inline-end: 0.35rem;
     }
 
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-      padding: 0.2rem 0.55rem;
+    .brand-title {
+      margin: 0;
+      font-size: 1.08rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .live-pill {
+      padding: 0.28rem 0.68rem;
       border-radius: 999px;
       font-size: 0.78rem;
       font-weight: 600;
-      white-space: nowrap;
       background: var(--neutral-bg);
       color: var(--neutral-text);
+      border: 1px solid var(--border);
     }
 
-    .badge-ok { background: var(--ok-bg); color: var(--ok-text); }
-    .badge-warn { background: var(--warn-bg); color: var(--warn-text); }
-    .badge-err { background: var(--err-bg); color: var(--err-text); }
+    .live-pill.is-live {
+      background: var(--ok-bg);
+      color: var(--ok-text);
+      border-color: color-mix(in oklab, var(--ok-text) 30%, transparent);
+    }
 
-    /* KPI Grid */
+    .updated-text {
+      font-size: 0.8rem;
+      color: var(--muted);
+      padding-inline: 0.25rem;
+    }
+
+    .user-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.42rem;
+      padding: 0.24rem 0.6rem 0.24rem 0.26rem;
+      border-radius: 999px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .user-avatar {
+      inline-size: 1.5rem;
+      block-size: 1.5rem;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      font-size: 0.72rem;
+      font-weight: 700;
+      background: color-mix(in oklab, var(--accent) 22%, var(--surface-3));
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+
+    .main-content {
+      max-inline-size: 88rem;
+      margin-inline: auto;
+      padding: 1.25rem 1.25rem 3.5rem;
+    }
+
+    /* KPI Strip */
     .kpi-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(15.5rem, 1fr));
-      gap: 0.9rem;
+      grid-template-columns: repeat(auto-fit, minmax(min(16.5rem, 100%), 1fr));
+      gap: 0.95rem;
       margin-block-end: 1.35rem;
     }
 
     .kpi-card {
+      min-inline-size: 0;
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 0.75rem;
-      padding: 1rem 1.1rem;
+      border-radius: 0.85rem;
+      padding: 1.05rem 1.15rem;
+      box-shadow: var(--shadow-card);
       display: grid;
-      gap: 0.35rem;
+      gap: 0.55rem;
+      align-content: space-between;
+    }
+
+    .kpi-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
     }
 
     .kpi-label {
-      font-size: 0.8rem;
-      font-weight: 600;
+      font-size: 0.76rem;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.05em;
       color: var(--muted);
     }
 
+    .kpi-icon-box {
+      inline-size: 1.9rem;
+      block-size: 1.9rem;
+      border-radius: 0.5rem;
+      display: grid;
+      place-items: center;
+      background: color-mix(in oklab, var(--accent) 13%, var(--surface-2));
+      color: var(--accent);
+      flex: none;
+    }
+
+    .kpi-icon-ok {
+      background: color-mix(in oklab, var(--ok-text) 14%, var(--surface-2));
+      color: var(--ok-text);
+    }
+
+    .kpi-value-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      min-inline-size: 0;
+    }
+
     .kpi-value {
-      font-size: 1.45rem;
+      font-size: 1.48rem;
       font-weight: 700;
+      letter-spacing: -0.025em;
       line-height: 1.2;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
 
-    .kpi-sub {
-      font-size: 0.84rem;
+    .kpi-value-mono {
+      font-size: 1.06rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .kpi-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+
+    .stat-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.16rem 0.5rem;
+      border-radius: 0.4rem;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      font-size: 0.76rem;
       color: var(--muted);
+    }
+
+    .stat-chip strong {
+      color: var(--text);
+      font-weight: 600;
     }
 
     .health-bar {
       display: flex;
-      block-size: 0.45rem;
+      gap: 2px;
+      block-size: 0.44rem;
       border-radius: 999px;
       overflow: hidden;
       background: var(--surface-2);
-      margin-block-start: 0.25rem;
     }
 
     .health-bar > span {
       display: block;
       block-size: 100%;
+      min-inline-size: 4px;
     }
 
     .seg-ok { background: var(--ok-text); }
     .seg-warn { background: var(--warn-text); }
-    .seg-untested { background: var(--muted); opacity: 0.45; }
+    .seg-untested { background: var(--muted); opacity: 0.5; }
     .seg-err { background: var(--err-text); }
 
-    /* Tabs */
+    /* Tabs with Anchor Positioning Sliding Underline + @supports Fallback */
+    .tablist-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      border-block-end: 1px solid var(--border);
+      margin-block-end: 1.15rem;
+    }
+
     .tablist {
+      position: relative;
       display: flex;
       overflow-x: auto;
       gap: 0.25rem;
-      border-block-end: 1px solid var(--border);
-      margin-block-end: 1rem;
       scroll-snap-type: inline proximity;
+      padding-block-end: 2px;
     }
 
     [role="tab"] {
@@ -430,111 +837,469 @@
       position: relative;
       background: transparent;
       border: 0;
-      border-radius: 0.375rem 0.375rem 0 0;
+      border-radius: 0.5rem 0.5rem 0 0;
       color: var(--muted);
-      padding: 0.65rem 1rem;
+      padding: 0.68rem 0.95rem;
       font-weight: 600;
+      font-size: 0.89rem;
       scroll-snap-align: start;
     }
 
     [role="tab"]:hover {
       color: var(--text);
+      background: color-mix(in oklab, var(--surface-2) 60%, transparent);
     }
 
     [role="tab"][aria-selected="true"] {
       color: var(--accent);
+      anchor-name: --active-tab;
     }
 
-    [role="tab"][aria-selected="true"]::after {
-      content: "";
-      position: absolute;
-      inset: auto 0 0;
-      border-block-end: 3px solid var(--accent);
+    .tab-count {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.08rem 0.44rem;
+      border-radius: 999px;
+      background: var(--surface-2);
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+
+    [role="tab"][aria-selected="true"] .tab-count {
+      background: color-mix(in oklab, var(--accent) 16%, var(--surface));
+      color: var(--accent);
+      border-color: color-mix(in oklab, var(--accent) 30%, transparent);
+    }
+
+    @supports (position-anchor: --active-tab) and (inset-inline-start: anchor(left)) {
+      .tablist::before {
+        content: "";
+        position: absolute;
+        position-anchor: --active-tab;
+        inset-block-end: 0;
+        inset-inline-start: anchor(left);
+        inset-inline-end: anchor(right);
+        border-block-end: 2.5px solid var(--accent);
+        pointer-events: none;
+      }
+
+      @media (prefers-reduced-motion: no-preference) {
+        .tablist::before {
+          transition: inset 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+      }
+    }
+
+    @supports not ((position-anchor: --active-tab) and (inset-inline-start: anchor(left))) {
+      [role="tab"][aria-selected="true"]::after {
+        content: "";
+        position: absolute;
+        inset: auto 0 0;
+        border-block-end: 2.5px solid var(--accent);
+      }
+    }
+
+    .kbd-hint {
+      font-size: 0.76rem;
+      color: var(--muted);
+      display: none;
+      align-items: center;
+      gap: 0.4rem;
+      padding-block-end: 0.35rem;
+    }
+
+    @media (min-width: 960px) {
+      .kbd-hint {
+        display: inline-flex;
+      }
+    }
+
+    kbd {
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-size: 0.72rem;
+      padding: 0.08rem 0.35rem;
+      border-radius: 0.3rem;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text);
     }
 
     /* Keep role="tabpanel" free of padding/border/background for hidden="until-found" compatibility */
     .panel-inner {
+      min-inline-size: 0;
       display: grid;
       gap: 1rem;
     }
 
+    .bento-grid {
+      min-inline-size: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(24rem, 100%), 1fr));
+      gap: 1rem;
+    }
+
     .section-card {
+      min-inline-size: 0;
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 0.75rem;
-      padding: 1rem;
+      border-radius: 0.85rem;
+      padding: 1.15rem;
+      box-shadow: var(--shadow-card);
       display: grid;
-      gap: 0.85rem;
+      gap: 0.95rem;
+      align-content: start;
     }
 
     .section-header {
+      min-inline-size: 0;
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
-      gap: 0.65rem;
+      gap: 0.65rem 1rem;
     }
 
     .section-title {
       margin: 0;
-      font-size: 1rem;
+      font-size: 0.98rem;
       font-weight: 700;
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
     }
 
-    .toolbar {
+    /* Overview Pool Donut Card */
+    .donut-layout {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 0.5rem;
+      gap: 1.35rem;
     }
 
-    .toolbar .input {
-      inline-size: min(16rem, 100%);
-      padding: 0.42rem 0.65rem;
-      font-size: 0.88rem;
-    }
-
-    .toolbar .select {
-      inline-size: auto;
-      padding: 0.42rem 0.65rem;
-      font-size: 0.88rem;
-    }
-
-    .kv-grid {
+    .donut-ring {
+      --stop-ok: 0deg;
+      --stop-warn: 0deg;
+      --stop-err: 0deg;
+      position: relative;
+      inline-size: 7.75rem;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      flex: none;
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+      place-items: center;
+      background: conic-gradient(
+        var(--ok-text) 0deg var(--stop-ok),
+        var(--warn-text) var(--stop-ok) var(--stop-warn),
+        var(--err-text) var(--stop-warn) var(--stop-err),
+        var(--surface-3) var(--stop-err) 360deg
+      );
+    }
+
+    .donut-hole {
+      inline-size: 5.5rem;
+      block-size: 5.5rem;
+      border-radius: 50%;
+      background: var(--surface);
+      display: grid;
+      place-content: center;
+      text-align: center;
+      border: 1px solid var(--border);
+    }
+
+    .donut-pct {
+      font-size: 1.28rem;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+
+    .donut-cap {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .legend-grid {
+      margin: 0;
+      min-inline-size: 0;
+      flex: 1 1 12rem;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.55rem 0.75rem;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: 0.42rem 0.6rem;
+      border-radius: 0.5rem;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+    }
+
+    .legend-item dt {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .legend-item dd {
+      margin: 0;
+      font-size: 0.86rem;
+      font-weight: 700;
+    }
+
+    .legend-ok { color: var(--ok-text); }
+    .legend-warn { color: var(--warn-text); }
+    .legend-err { color: var(--err-text); }
+
+    /* Telemetry Chart & Token Strip */
+    .spark-wrap {
+      min-inline-size: 0;
+      min-block-size: 8.2rem;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 0.65rem;
+      padding: 0.75rem 0.85rem;
+      display: grid;
+      align-items: center;
+    }
+
+    .spark-svg {
+      inline-size: 100%;
+      block-size: 6.5rem;
+      display: block;
+      overflow: visible;
+    }
+
+    .spark-bar-ok { fill: var(--ok-text); }
+    .spark-bar-warn { fill: var(--warn-text); }
+    .spark-bar-err { fill: var(--err-text); }
+    .spark-gridline { stroke: var(--border); stroke-width: 1; stroke-dasharray: 3 3; }
+
+    .ready-box {
+      min-inline-size: 0;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
       gap: 0.75rem;
     }
 
-    .kv-item {
-      background: var(--surface-2);
-      border-radius: 0.5rem;
-      padding: 0.65rem 0.8rem;
-      display: grid;
-      gap: 0.15rem;
+    .ready-box > div {
+      min-inline-size: 0;
+      max-inline-size: 100%;
     }
 
-    .kv-item dt {
-      font-size: 0.76rem;
+    .ready-box .mono {
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .ready-title {
+      font-size: 0.84rem;
+      font-weight: 600;
+      color: var(--text);
+      margin: 0 0 0.25rem;
+    }
+
+    .token-strip {
+      min-inline-size: 0;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.6rem;
+    }
+
+    .token-box {
+      min-inline-size: 0;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 0.55rem;
+      padding: 0.55rem 0.7rem;
+    }
+
+    .token-label {
+      display: block;
+      font-size: 0.72rem;
       color: var(--muted);
       font-weight: 600;
       text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .token-val {
+      font-size: 1.04rem;
+      font-weight: 700;
+    }
+
+    /* Runtime Config Spec Grid */
+    .kv-grid {
+      margin: 0;
+      min-inline-size: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(13.5rem, 100%), 1fr));
+      gap: 0.65rem;
+    }
+
+    @media (min-width: 900px) {
+      .kv-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    .kv-item {
+      min-inline-size: 0;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 0.58rem;
+      padding: 0.62rem 0.78rem;
+      display: grid;
+      gap: 0.18rem;
+    }
+
+    .kv-item dt {
+      font-size: 0.72rem;
+      color: var(--muted);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
     }
 
     .kv-item dd {
       margin: 0;
       font-weight: 600;
-      font-size: 0.92rem;
+      font-size: 0.88rem;
       overflow-wrap: anywhere;
     }
 
-    /* Responsive Tables */
+    /* Toolbars & Segmented Filter Pills */
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+      max-inline-size: 100%;
+    }
+
+    .seg-group {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 0.22rem;
+      padding: 0.2rem;
+      border-radius: 0.6rem;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      max-inline-size: 100%;
+    }
+
+    .seg-btn {
+      padding: 0.28rem 0.56rem;
+      border-radius: 0.42rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid transparent;
+    }
+
+    .seg-btn:hover {
+      color: var(--text);
+    }
+
+    .seg-btn[aria-pressed="true"] {
+      background: var(--surface);
+      color: var(--text);
+      border-color: var(--border);
+      box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+    }
+
+    .search-box {
+      position: relative;
+      display: flex;
+      align-items: center;
+      inline-size: 13.5rem;
+      max-inline-size: 100%;
+    }
+
+    .search-box-wide {
+      inline-size: 16.5rem;
+      max-inline-size: 100%;
+    }
+
+    @media (max-width: 600px) {
+      .main-content {
+        padding: 0.9rem 0.75rem 2.5rem;
+      }
+      .section-card {
+        padding: 0.9rem;
+      }
+      .search-box,
+      .search-box-wide {
+        inline-size: 100%;
+      }
+      .donut-layout {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .donut-ring {
+        margin-inline: auto;
+      }
+      .legend-grid {
+        inline-size: 100%;
+      }
+      .token-strip {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .search-box .search-ico {
+      position: absolute;
+      inset-inline-start: 0.65rem;
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    .search-box .input {
+      padding-block: 0.4rem;
+      padding-inline: 2rem 2rem;
+      font-size: 0.85rem;
+    }
+
+    .search-clear {
+      position: absolute;
+      inset-inline-end: 0.28rem;
+      padding: 0.2rem 0.38rem;
+      font-size: 0.78rem;
+      background: transparent;
+      color: var(--muted);
+      border: 0;
+    }
+
+    .search-clear:hover {
+      color: var(--text);
+    }
+
+    .feedback-bar {
+      font-size: 0.83rem;
+      color: var(--muted);
+      min-block-size: 1.2rem;
+    }
+
+    /* Tables + Sortable Headers */
     .table-wrapper {
+      min-inline-size: 0;
       overflow: auto;
       max-inline-size: 100%;
-      max-block-size: min(560px, 72dvh);
+      max-block-size: min(580px, 70dvh);
       border: 1px solid var(--border);
-      border-radius: 0.6rem;
+      border-radius: 0.65rem;
       container-type: inline-size;
       background: var(--surface);
     }
@@ -543,13 +1308,13 @@
       inline-size: 100%;
       border-collapse: separate;
       border-spacing: 0;
-      font-size: 0.88rem;
+      font-size: 0.86rem;
     }
 
     thead {
       position: sticky;
       inset-block-start: 0;
-      z-index: 2;
+      z-index: 3;
       background: var(--surface-2);
     }
 
@@ -558,14 +1323,59 @@
       text-align: start;
       border-block-end: 1px solid var(--border);
       white-space: nowrap;
+      vertical-align: middle;
     }
 
     thead th {
-      font-size: 0.78rem;
+      font-size: 0.74rem;
       text-transform: uppercase;
-      letter-spacing: 0.03em;
+      letter-spacing: 0.04em;
       color: var(--muted);
       font-weight: 700;
+      border-block-end: 1px solid var(--border-strong);
+    }
+
+    thead th:has(> button) {
+      padding: 0;
+    }
+
+    .sort-btn {
+      inline-size: 100%;
+      justify-content: space-between;
+      padding: 0.58rem 0.75rem;
+      border-radius: 0;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      min-block-size: 2.2rem;
+    }
+
+    .sort-btn:hover {
+      color: var(--text);
+      background: color-mix(in oklab, var(--surface-3) 65%, transparent);
+    }
+
+    th[aria-sort] .sort-btn {
+      color: var(--accent);
+    }
+
+    .sort-arrow {
+      inline-size: 0.85rem;
+      block-size: 0.85rem;
+      opacity: 0.35;
+      transition: transform 0.14s ease, opacity 0.14s ease;
+    }
+
+    th[aria-sort] .sort-arrow {
+      opacity: 1;
+    }
+
+    th[aria-sort="descending"] .sort-arrow {
+      transform: rotate(180deg);
     }
 
     tbody th {
@@ -576,8 +1386,37 @@
       font-weight: 600;
     }
 
-    tbody tr:hover td, tbody tr:hover th {
+    tbody tr.clickable-row {
+      cursor: pointer;
+    }
+
+    tbody tr:hover td,
+    tbody tr:hover th {
       background: var(--surface-2);
+    }
+
+    tbody tr:last-child td,
+    tbody tr:last-child th {
+      border-block-end: 0;
+    }
+
+    tbody tr {
+      view-transition-name: match-element;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) {
+        animation: none;
+      }
+    }
+
+    .cell-flex {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      max-inline-size: 100%;
     }
 
     .cell-clip {
@@ -585,20 +1424,73 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      display: inline-block;
+      vertical-align: bottom;
     }
+
+    .cell-detail {
+      max-inline-size: 25rem;
+    }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+      white-space: normal;
+      min-inline-size: 9rem;
+    }
+
+    .micro-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.1rem 0.42rem;
+      border-radius: 0.35rem;
+      font-size: 0.72rem;
+      font-weight: 600;
+      background: var(--surface-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .micro-chip-accent {
+      background: color-mix(in oklab, var(--accent) 13%, var(--surface));
+      color: var(--accent);
+      border-color: color-mix(in oklab, var(--accent) 26%, transparent);
+    }
+
+    .rtt-cell {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .rtt-meter {
+      inline-size: 2.5rem;
+      block-size: 0.34rem;
+      border-radius: 999px;
+      background: var(--surface-3);
+      overflow: hidden;
+      flex: none;
+    }
+
+    .rtt-fill {
+      display: block;
+      block-size: 100%;
+      border-radius: 999px;
+      background: var(--ok-text);
+    }
+
+    .rtt-fill-warn { background: var(--warn-text); }
+    .rtt-fill-err { background: var(--err-text); }
 
     .empty-state {
-      padding: 1.75rem 1rem;
+      padding: 2.25rem 1rem;
       text-align: center;
       color: var(--muted);
-      font-size: 0.92rem;
+      font-size: 0.9rem;
     }
 
-    .feedback-bar {
-      font-size: 0.86rem;
-      color: var(--muted);
-    }
-
+    /* Responsive Table Cards on Narrow Containers */
     @container (width < 640px) {
       table, thead, tbody, tr, th, td {
         display: block;
@@ -609,9 +1501,9 @@
       }
 
       tr {
-        margin-block-end: 0.85rem;
+        margin: 0.65rem;
         border: 1px solid var(--border);
-        border-radius: 0.5rem;
+        border-radius: 0.65rem;
         overflow: hidden;
         background: var(--surface);
       }
@@ -621,6 +1513,7 @@
         inset-block-start: 0;
         z-index: 2;
         background: var(--surface-2);
+        border-block-end: 1px solid var(--border);
       }
 
       td {
@@ -628,7 +1521,8 @@
         overflow-wrap: anywhere;
       }
 
-      .cell-clip {
+      .cell-clip,
+      .cell-detail {
         max-inline-size: none;
         white-space: normal;
       }
@@ -638,7 +1532,7 @@
         --label-3: "Protocol";
         --label-4: "RTT";
         --label-5: "OK";
-        --label-6: "Static";
+        --label-6: "Source";
         --label-7: "Detail";
       }
 
@@ -675,18 +1569,273 @@
       td:nth-child(7)::before { content: var(--label-7) ": "; font-weight: 700; color: var(--muted); }
       td:nth-child(8)::before { content: var(--label-8) ": "; font-weight: 700; color: var(--muted); }
     }
+
+    /* Detail Inspector <dialog> (Top Layer Animation + Light Dismiss) */
+    dialog {
+      inline-size: min(36rem, calc(100vw - 2rem));
+      max-block-size: calc(100dvh - 2rem);
+      padding: 0;
+      border: 1px solid var(--border);
+      border-radius: 0.9rem;
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: var(--shadow-pop);
+      opacity: 0;
+      transition-property: opacity, transform, display, overlay;
+      transition-duration: 0.22s;
+      transition-timing-function: ease-out;
+      transition-behavior: allow-discrete;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      dialog {
+        transform: scale(0.95);
+      }
+    }
+
+    dialog::backdrop {
+      background-color: rgb(0 0 0 / 0);
+      backdrop-filter: blur(0px);
+      transition-property: background-color, backdrop-filter, display, overlay;
+      transition-duration: 0.22s;
+      transition-timing-function: ease-out;
+      transition-behavior: allow-discrete;
+    }
+
+    dialog[open]:where(:not([data-closing])) {
+      opacity: 1;
+
+      @starting-style {
+        opacity: 0;
+      }
+
+      @media (prefers-reduced-motion: no-preference) {
+        transform: scale(1);
+
+        @starting-style {
+          transform: scale(0.95);
+        }
+      }
+
+      &::backdrop {
+        background-color: rgb(2 6 12 / 0.6);
+        backdrop-filter: blur(3px);
+
+        @starting-style {
+          background-color: rgb(2 6 12 / 0);
+        }
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      dialog, dialog::backdrop {
+        transition-duration: 0.08s;
+      }
+    }
+
+    .dialog-card {
+      display: grid;
+      max-block-size: calc(100dvh - 2rem);
+      grid-template-rows: auto minmax(0, 1fr) auto;
+    }
+
+    .dialog-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 1rem 1.2rem;
+      border-block-end: 1px solid var(--border);
+    }
+
+    .dialog-head h2 {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .dialog-body {
+      overflow: auto;
+      padding: 1.1rem 1.2rem;
+      display: grid;
+      gap: 0.85rem;
+    }
+
+    .dialog-dl {
+      margin: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+      gap: 0.6rem;
+    }
+
+    .detail-pre {
+      margin: 0;
+      padding: 0.75rem 0.9rem;
+      border-radius: 0.55rem;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-size: 0.82rem;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .dialog-foot {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.55rem;
+      padding: 0.85rem 1.2rem;
+      border-block-start: 1px solid var(--border);
+      background: var(--surface-2);
+    }
+
+    /* Toast Notification Stack */
+    .toast-region {
+      position: fixed;
+      inset-block-end: 1.15rem;
+      inset-inline-end: 1.15rem;
+      z-index: 60;
+      display: grid;
+      gap: 0.55rem;
+      justify-items: end;
+      pointer-events: none;
+      max-inline-size: min(24rem, calc(100vw - 2rem));
+    }
+
+    .toast-item {
+      pointer-events: auto;
+      position: fixed;
+      inset-block-start: auto;
+      inset-inline-start: auto;
+      inset-block-end: calc(1.15rem + var(--toast-offset, 0px));
+      inset-inline-end: 1.15rem;
+      margin: 0;
+      inline-size: min(23.5rem, calc(100vw - 2.3rem));
+      max-inline-size: none;
+      padding: 0.72rem 0.9rem;
+      border-radius: 0.7rem;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border-strong);
+      box-shadow: var(--shadow-pop);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      font-size: 0.86rem;
+      font-weight: 500;
+      opacity: 0;
+      transition-property: opacity, transform, inset-block-end, display, overlay;
+      transition-duration: 0.2s;
+      transition-timing-function: ease-out;
+      transition-behavior: allow-discrete;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .toast-item {
+        transform: translateY(0.5rem);
+      }
+    }
+
+    .toast-item:is(:popover-open, .\:popover-open, [data-open]):where(:not([data-closing])) {
+      display: flex;
+      opacity: 1;
+
+      @starting-style {
+        opacity: 0;
+      }
+
+      @media (prefers-reduced-motion: no-preference) {
+        transform: translateY(0);
+
+        @starting-style {
+          transform: translateY(0.5rem);
+        }
+      }
+    }
+
+    .toast-ok { border-inline-start: 3px solid var(--ok-text); }
+    .toast-err { border-inline-start: 3px solid var(--err-text); }
+    .toast-info { border-inline-start: 3px solid var(--accent); }
+
+    .toast-body {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      min-inline-size: 0;
+    }
+
+    .toast-close {
+      padding: 0.22rem;
+      min-inline-size: 1.65rem;
+      min-block-size: 1.65rem;
+      background: transparent;
+      color: var(--muted);
+      border-radius: 0.38rem;
+    }
+
+    .toast-close:hover {
+      background: var(--surface-2);
+      color: var(--text);
+    }
+
+    @media (forced-colors: active) {
+      .kpi-card,
+      .section-card,
+      .badge,
+      .stat-chip,
+      .kv-item,
+      .toast-item,
+      dialog {
+        border: 1px solid CanvasText;
+      }
+      [role="tab"][aria-selected="true"] {
+        outline: 2px solid Highlight;
+      }
+    }
   </style>
 </head>
 <body>
+  <p class="sr-only">Screen reader announcements</p>
+  <div id="sr-announcer" class="sr-only" aria-live="polite"></div>
+  <div id="sort-status" class="sr-only" role="status"></div>
+
+  <!-- Sign In Screen -->
   <main id="login-view" class="login-shell" hidden>
+    <div class="login-corner-bar">
+      <button
+        type="button"
+        class="btn-secondary btn-icon theme-btn"
+        aria-label="Toggle color scheme"
+      >
+        <span class="icon-sun" aria-hidden="true">
+          <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+          <span class="sr-only">Switch to light theme</span>
+        </span>
+        <span class="icon-moon" aria-hidden="true">
+          <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+          <span class="sr-only">Switch to dark theme</span>
+        </span>
+      </button>
+    </div>
+
     <section class="login-card" aria-labelledby="login-heading">
       <div class="login-brand">
-        <span class="brand-dot" aria-hidden="true"></span>
-        <h1 id="login-heading">zero-opencode</h1>
+        <div class="brand-emblem" aria-hidden="true">
+          <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
+        </div>
+        <div>
+          <span class="login-kicker">Control Plane</span>
+          <h1 id="login-heading">zero-opencode</h1>
+        </div>
       </div>
-      <p class="login-subtitle">Sign in to inspect proxy health, routing, and live requests.</p>
 
-      <div id="login-error" class="alert-error" role="alert" hidden></div>
+      <p class="login-subtitle">Sign in with your dashboard credentials from <span class="mono">config.yaml</span> to monitor proxy health, routing failover, and requests.</p>
+
+      <div id="login-error" class="alert-error" role="alert" hidden>
+        <svg class="svg-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+        <span id="login-error-text"></span>
+      </div>
 
       <form id="login-form" class="login-form" method="post" action="/dashboard/api/login">
         <div class="field">
@@ -707,7 +1856,7 @@
 
         <div class="field">
           <label for="password">Password</label>
-          <div class="pw-row">
+          <div class="pw-wrap">
             <input
               class="input"
               id="password"
@@ -720,74 +1869,217 @@
             <button
               type="button"
               id="toggle-pw"
-              class="btn-ghost"
+              class="pw-toggle"
               aria-pressed="false"
               aria-label="Show password"
             >Show</button>
           </div>
         </div>
 
-        <button type="submit" id="login-submit" class="btn-primary">Sign In</button>
+        <button type="submit" id="login-submit" class="btn-primary login-submit-btn">Sign In</button>
       </form>
     </section>
   </main>
 
-  <div id="app-view" class="app-shell" hidden>
+  <!-- Main Dashboard -->
+  <div id="app-view" hidden>
     <header class="topbar">
-      <div class="topbar-left">
-        <h1 class="topbar-title">
-          <span class="brand-dot" aria-hidden="true"></span>
-          <span>zero-opencode</span>
-        </h1>
-        <span id="chain-badge" class="badge" hidden></span>
-        <span id="last-updated" class="feedback-bar tabular"></span>
-      </div>
-      <div class="topbar-actions">
-        <button type="button" id="auto-refresh-btn" class="btn-secondary" aria-pressed="true">Live: 3s</button>
-        <button type="button" id="refresh-now-btn" class="btn-secondary">Refresh</button>
-        <span id="user-badge" class="badge"></span>
-        <button type="button" id="logout-btn" class="btn-ghost">Sign Out</button>
+      <div class="topbar-inner">
+        <div class="topbar-left">
+          <div class="brand-lockup">
+            <div class="brand-emblem brand-emblem-sm" aria-hidden="true">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
+            </div>
+            <h1 class="brand-title">zero-opencode</h1>
+          </div>
+
+          <button type="button" id="auto-refresh-btn" class="live-pill is-live" aria-pressed="true">
+            <span class="pulse-dot" aria-hidden="true"></span>
+            <span id="live-label">Live · 3s</span>
+          </button>
+
+          <span id="chain-badge" class="badge" hidden></span>
+        </div>
+
+        <div class="topbar-right">
+          <span id="last-updated" class="updated-text tabular"></span>
+
+          <button type="button" id="refresh-now-btn" class="btn-secondary" title="Refresh now (shortcut: r)">
+            <svg class="svg-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+            <span>Refresh</span>
+          </button>
+
+          <button
+            type="button"
+            class="btn-secondary btn-icon theme-btn"
+            aria-label="Toggle color scheme"
+            title="Switch light / dark theme"
+          >
+            <span class="icon-sun" aria-hidden="true">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+              <span class="sr-only">Switch to light theme</span>
+            </span>
+            <span class="icon-moon" aria-hidden="true">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+              <span class="sr-only">Switch to dark theme</span>
+            </span>
+          </button>
+
+          <span class="user-chip">
+            <span id="user-avatar" class="user-avatar" aria-hidden="true">A</span>
+            <span id="user-badge">admin</span>
+          </span>
+
+          <button type="button" id="logout-btn" class="btn-ghost" title="Sign out">
+            <svg class="svg-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+            <span>Sign Out</span>
+          </button>
+        </div>
       </div>
     </header>
 
-    <section class="kpi-grid" aria-label="Runtime summary metrics">
-      <article class="kpi-card">
-        <span class="kpi-label">Server &amp; Load</span>
-        <span id="kpi-uptime" class="kpi-value tabular">-</span>
-        <span id="kpi-inflight" class="kpi-sub tabular">-</span>
-      </article>
-      <article class="kpi-card">
-        <span class="kpi-label">Requests &amp; Latency</span>
-        <span id="kpi-requests" class="kpi-value tabular">-</span>
-        <span id="kpi-latency" class="kpi-sub tabular">-</span>
-      </article>
-      <article class="kpi-card">
-        <span class="kpi-label">Proxy Pool Health</span>
-        <span id="kpi-pool-health" class="kpi-value tabular">-</span>
-        <span id="kpi-pool-sub" class="kpi-sub tabular">-</span>
-        <div id="kpi-health-bar" class="health-bar" aria-hidden="true"></div>
-      </article>
-      <article class="kpi-card">
-        <span class="kpi-label">Active Proxy &amp; Failover</span>
-        <span id="kpi-active-proxy" class="kpi-value mono">-</span>
-        <span id="kpi-switches" class="kpi-sub tabular">-</span>
-      </article>
-    </section>
+    <main class="main-content">
+      <!-- 4 Hero KPI Cards -->
+      <section class="kpi-grid" aria-label="Runtime summary metrics">
+        <article class="kpi-card">
+          <div class="kpi-top">
+            <span class="kpi-label">Server &amp; Load</span>
+            <span class="kpi-icon-box kpi-icon-ok" aria-hidden="true">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="8" x="2" y="2" rx="2" ry="2"/><rect width="20" height="8" x="2" y="14" rx="2" ry="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></svg>
+            </span>
+          </div>
+          <div class="kpi-value-row">
+            <span id="kpi-uptime" class="kpi-value tabular">-</span>
+            <span class="badge badge-ok"><span class="pulse-dot" aria-hidden="true"></span>Online</span>
+          </div>
+          <div id="kpi-load-chips" class="kpi-chips"></div>
+        </article>
 
-    <div class="tabs">
-      <div class="tablist" focusgroup="tablist nomemory" role="tablist" aria-label="Dashboard sections">
-        <button type="button" role="tab" id="tab-overview" aria-selected="true" focusgroupstart>Overview</button>
-        <button type="button" role="tab" id="tab-proxies" aria-selected="false">Proxies</button>
-        <button type="button" role="tab" id="tab-requests" aria-selected="false">Requests</button>
-        <button type="button" role="tab" id="tab-models" aria-selected="false">Models</button>
+        <article class="kpi-card">
+          <div class="kpi-top">
+            <span class="kpi-label">Requests &amp; Latency</span>
+            <span class="kpi-icon-box" aria-hidden="true">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </span>
+          </div>
+          <div class="kpi-value-row">
+            <span id="kpi-requests" class="kpi-value tabular">-</span>
+            <span id="kpi-ok-pill" class="badge">Idle</span>
+          </div>
+          <div id="kpi-latency-chips" class="kpi-chips"></div>
+        </article>
+
+        <article class="kpi-card">
+          <div class="kpi-top">
+            <span class="kpi-label">Proxy Pool Health</span>
+            <span class="kpi-icon-box kpi-icon-ok" aria-hidden="true">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+            </span>
+          </div>
+          <div class="kpi-value-row">
+            <span id="kpi-pool-health" class="kpi-value tabular">-</span>
+          </div>
+          <div id="kpi-health-bar" class="health-bar" aria-hidden="true"></div>
+          <div id="kpi-pool-chips" class="kpi-chips"></div>
+        </article>
+
+        <article class="kpi-card">
+          <div class="kpi-top">
+            <span class="kpi-label">Active Proxy &amp; Failover</span>
+            <span class="kpi-icon-box" aria-hidden="true">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+            </span>
+          </div>
+          <div class="kpi-value-row">
+            <span id="kpi-active-proxy" class="kpi-value kpi-value-mono mono">-</span>
+            <button type="button" id="copy-active-proxy-btn" class="copy-mini" title="Copy active proxy" aria-label="Copy active proxy" hidden>
+              <svg class="svg-icon svg-icon-sm" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+            </button>
+          </div>
+          <div id="kpi-switch-chips" class="kpi-chips"></div>
+        </article>
+      </section>
+
+      <!-- Tabs Navigation -->
+      <div class="tablist-wrap">
+        <div class="tablist" role="tablist" aria-label="Dashboard sections">
+          <button type="button" role="tab" id="tab-overview" aria-selected="true">
+            <svg class="svg-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+            <span>Overview</span>
+          </button>
+          <button type="button" role="tab" id="tab-proxies" aria-selected="false">
+            <svg class="svg-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+            <span>Proxies</span>
+            <span id="tab-count-proxies" class="tab-count tabular">0</span>
+          </button>
+          <button type="button" role="tab" id="tab-requests" aria-selected="false">
+            <svg class="svg-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+            <span>Requests</span>
+            <span id="tab-count-requests" class="tab-count tabular">0</span>
+          </button>
+          <button type="button" role="tab" id="tab-models" aria-selected="false">
+            <svg class="svg-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            <span>Models</span>
+            <span id="tab-count-models" class="tab-count tabular">0</span>
+          </button>
+        </div>
+
+        <span class="kbd-hint" aria-hidden="true">
+          Shortcuts: <kbd>1</kbd>-<kbd>4</kbd> tabs <kbd>/</kbd> search <kbd>r</kbd> refresh
+        </span>
       </div>
 
+      <!-- Overview Panel -->
       <div id="panel-overview" role="tabpanel" aria-labelledby="tab-overview" tabindex="0">
         <div class="panel-inner">
+          <div class="bento-grid">
+            <section class="section-card" aria-labelledby="pool-chart-title">
+              <div class="section-header">
+                <h2 id="pool-chart-title" class="section-title">Proxy Pool Breakdown</h2>
+                <div class="toolbar">
+                  <button type="button" id="ov-probe-btn" class="btn-secondary">Trigger Probe</button>
+                  <button type="button" id="ov-reload-btn" class="btn-primary">Reload Lists</button>
+                </div>
+              </div>
+              <div id="pool-donut-wrap" class="donut-layout">
+                <div id="pool-donut" class="donut-ring" role="img" aria-label="Proxy pool status chart">
+                  <div class="donut-hole">
+                    <span id="donut-pct" class="donut-pct tabular">0%</span>
+                    <span class="donut-cap">Ready</span>
+                  </div>
+                </div>
+                <dl id="pool-legend" class="legend-grid"></dl>
+              </div>
+              <div id="pool-overview-note" class="feedback-bar tabular"></div>
+            </section>
+
+            <section class="section-card" aria-labelledby="telemetry-title">
+              <div class="section-header">
+                <h2 id="telemetry-title" class="section-title">Recent Request Latency &amp; Tokens</h2>
+                <span id="telemetry-range" class="badge tabular">Last 24 requests</span>
+              </div>
+              <div id="spark-wrap" class="spark-wrap"></div>
+              <div class="token-strip">
+                <div class="token-box">
+                  <span class="token-label">Prompt Tokens</span>
+                  <span id="tok-prompt" class="token-val tabular">0</span>
+                </div>
+                <div class="token-box">
+                  <span class="token-label">Completion</span>
+                  <span id="tok-completion" class="token-val tabular">0</span>
+                </div>
+                <div class="token-box">
+                  <span class="token-label">Total Tokens</span>
+                  <span id="tok-total" class="token-val tabular">0</span>
+                </div>
+              </div>
+            </section>
+          </div>
+
           <section class="section-card" aria-labelledby="cfg-title">
             <div class="section-header">
               <h2 id="cfg-title" class="section-title">Runtime Configuration</h2>
-              <span id="overview-tokens" class="badge tabular"></span>
+              <span id="cfg-listen-badge" class="badge mono"></span>
             </div>
             <dl id="config-kv" class="kv-grid"></dl>
           </section>
@@ -795,18 +2087,19 @@
           <section class="section-card" aria-labelledby="model-usage-caption">
             <div class="section-header">
               <h2 class="section-title">Model Usage Breakdown</h2>
+              <span id="usage-models-count" class="badge tabular">0 active</span>
             </div>
             <div tabindex="0" role="region" aria-labelledby="model-usage-caption" class="table-wrapper">
               <table id="models-usage-table">
                 <caption id="model-usage-caption" class="sr-only">Model usage summary</caption>
                 <thead>
                   <tr>
-                    <th scope="col">Model</th>
-                    <th scope="col">Requests</th>
-                    <th scope="col">Success</th>
-                    <th scope="col">Errors</th>
-                    <th scope="col">Avg Latency</th>
-                    <th scope="col">Last Used</th>
+                    <th scope="col" data-type="text"><button type="button" class="sort-btn" commandfor="models-usage-table" command="--sort"><span>Model</span><svg class="sort-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m18 15-6-6-6 6"/></svg></button></th>
+                    <th scope="col" data-type="number"><button type="button" class="sort-btn" commandfor="models-usage-table" command="--sort"><span>Requests</span><svg class="sort-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m18 15-6-6-6 6"/></svg></button></th>
+                    <th scope="col" data-type="number"><button type="button" class="sort-btn" commandfor="models-usage-table" command="--sort"><span>Success</span><svg class="sort-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m18 15-6-6-6 6"/></svg></button></th>
+                    <th scope="col" data-type="number"><button type="button" class="sort-btn" commandfor="models-usage-table" command="--sort"><span>Errors</span><svg class="sort-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m18 15-6-6-6 6"/></svg></button></th>
+                    <th scope="col" data-type="number"><button type="button" class="sort-btn" commandfor="models-usage-table" command="--sort"><span>Avg Latency</span><svg class="sort-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m18 15-6-6-6 6"/></svg></button></th>
+                    <th scope="col" data-type="number"><button type="button" class="sort-btn" commandfor="models-usage-table" command="--sort"><span>Last Used</span><svg class="sort-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m18 15-6-6-6 6"/></svg></button></th>
                   </tr>
                 </thead>
                 <tbody id="models-usage-body"></tbody>
@@ -816,36 +2109,45 @@
         </div>
       </div>
 
+      <!-- Proxies Panel -->
       <div id="panel-proxies" role="tabpanel" aria-labelledby="tab-proxies" hidden>
         <div class="panel-inner">
           <section class="section-card" aria-labelledby="proxies-title">
             <div class="section-header">
               <h2 id="proxies-title" class="section-title">Proxy Pool Status</h2>
               <div class="toolbar">
-                <select id="proxy-status-filter" class="select" aria-label="Filter proxies by status">
-                  <option value="all">All statuses</option>
-                  <option value="healthy">Healthy</option>
-                  <option value="cooldown">Cooldown</option>
-                  <option value="untested">Untested</option>
-                  <option value="dead">Dead</option>
-                </select>
-                <input id="proxy-search" class="input" type="search" placeholder="Search host, protocol, error..." aria-label="Search proxies">
+                <div class="seg-group" role="group" aria-label="Filter proxies by status" id="proxy-filter-group">
+                  <button type="button" class="seg-btn" data-filter="all" aria-pressed="true">All</button>
+                  <button type="button" class="seg-btn" data-filter="healthy" aria-pressed="false">Healthy</button>
+                  <button type="button" class="seg-btn" data-filter="cooldown" aria-pressed="false">Cooldown</button>
+                  <button type="button" class="seg-btn" data-filter="untested" aria-pressed="false">Untested</button>
+                  <button type="button" class="seg-btn" data-filter="dead" aria-pressed="false">Dead</button>
+                </div>
+
+                <div class="search-box">
+                  <svg class="svg-icon svg-icon-sm search-ico" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                  <input id="proxy-search" class="input" type="search" placeholder="Search proxies..." aria-label="Search proxies">
+                  <button type="button" id="proxy-search-clear" class="search-clear" aria-label="Clear proxy search" hidden>&times;</button>
+                </div>
+
                 <button type="button" id="probe-btn" class="btn-secondary">Trigger Probe</button>
                 <button type="button" id="reload-lists-btn" class="btn-primary">Reload Lists</button>
               </div>
             </div>
-            <div id="proxy-action-msg" class="feedback-bar" aria-live="polite"></div>
+
+            <div id="proxy-action-msg" class="feedback-bar" aria-live="polite">Click any proxy row to inspect full probe diagnostics.</div>
+
             <div tabindex="0" role="region" aria-labelledby="proxies-table-caption" class="table-wrapper">
               <table id="proxies-table">
                 <caption id="proxies-table-caption" class="sr-only">Proxy pool entries</caption>
                 <thead>
                   <tr>
-                    <th scope="col">Proxy</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Protocol</th>
-                    <th scope="col">RTT</th>
-                    <th scope="col">OK</th>
-                    <th scope="col">Static</th>
+                    <th scope="col" data-type="text"><button type="button" class="sort-btn" commandfor="proxies-table" command="--sort"><span>Proxy</span><svg class="sort-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m18 15-6-6-6 6"/></svg></button></th>
+                    <th scope="col" data-type="text"><button type="button" class="sort-btn" commandfor="proxies-table" command="--sort"><span>Status</span><svg class="sort-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m18 15-6-6-6 6"/></svg></button></th>
+                    <th scope="col" data-type="text"><button type="button" class="sort-btn" commandfor="proxies-table" command="--sort"><span>Protocol</span><svg class="sort-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m18 15-6-6-6 6"/></svg></button></th>
+                    <th scope="col" data-type="number"><button type="button" class="sort-btn" commandfor="proxies-table" command="--sort"><span>RTT</span><svg class="sort-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m18 15-6-6-6 6"/></svg></button></th>
+                    <th scope="col" data-type="number"><button type="button" class="sort-btn" commandfor="proxies-table" command="--sort"><span>OK</span><svg class="sort-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m18 15-6-6-6 6"/></svg></button></th>
+                    <th scope="col" data-type="text"><button type="button" class="sort-btn" commandfor="proxies-table" command="--sort"><span>Source</span><svg class="sort-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m18 15-6-6-6 6"/></svg></button></th>
                     <th scope="col">Detail</th>
                   </tr>
                 </thead>
@@ -856,33 +2158,40 @@
         </div>
       </div>
 
+      <!-- Requests Panel -->
       <div id="panel-requests" role="tabpanel" aria-labelledby="tab-requests" hidden>
         <div class="panel-inner">
           <section class="section-card" aria-labelledby="requests-title">
             <div class="section-header">
               <h2 id="requests-title" class="section-title">Recent Requests</h2>
               <div class="toolbar">
-                <select id="req-status-filter" class="select" aria-label="Filter requests by status class">
-                  <option value="all">All statuses</option>
-                  <option value="2xx">2xx Success</option>
-                  <option value="4xx">4xx Client</option>
-                  <option value="5xx">5xx Server</option>
-                </select>
-                <input id="req-search" class="input" type="search" placeholder="Filter model, path, proxy..." aria-label="Search recent requests">
+                <div class="seg-group" role="group" aria-label="Filter requests by HTTP status class" id="req-filter-group">
+                  <button type="button" class="seg-btn" data-filter="all" aria-pressed="true">All</button>
+                  <button type="button" class="seg-btn" data-filter="2xx" aria-pressed="false">2xx</button>
+                  <button type="button" class="seg-btn" data-filter="4xx" aria-pressed="false">4xx</button>
+                  <button type="button" class="seg-btn" data-filter="5xx" aria-pressed="false">5xx</button>
+                </div>
+
+                <div class="search-box">
+                  <svg class="svg-icon svg-icon-sm search-ico" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                  <input id="req-search" class="input" type="search" placeholder="Filter model, path, proxy..." aria-label="Search recent requests">
+                  <button type="button" id="req-search-clear" class="search-clear" aria-label="Clear request search" hidden>&times;</button>
+                </div>
               </div>
             </div>
+
             <div tabindex="0" role="region" aria-labelledby="requests-table-caption" class="table-wrapper">
               <table id="requests-table">
                 <caption id="requests-table-caption" class="sr-only">Recent API requests</caption>
                 <thead>
                   <tr>
-                    <th scope="col">Time</th>
-                    <th scope="col">Endpoint</th>
-                    <th scope="col">Model</th>
-                    <th scope="col">Mode</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Duration</th>
-                    <th scope="col">Proxy</th>
+                    <th scope="col" data-type="number"><button type="button" class="sort-btn" commandfor="requests-table" command="--sort"><span>Time</span><svg class="sort-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m18 15-6-6-6 6"/></svg></button></th>
+                    <th scope="col" data-type="text"><button type="button" class="sort-btn" commandfor="requests-table" command="--sort"><span>Endpoint</span><svg class="sort-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m18 15-6-6-6 6"/></svg></button></th>
+                    <th scope="col" data-type="text"><button type="button" class="sort-btn" commandfor="requests-table" command="--sort"><span>Model</span><svg class="sort-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m18 15-6-6-6 6"/></svg></button></th>
+                    <th scope="col" data-type="text"><button type="button" class="sort-btn" commandfor="requests-table" command="--sort"><span>Mode</span><svg class="sort-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m18 15-6-6-6 6"/></svg></button></th>
+                    <th scope="col" data-type="number"><button type="button" class="sort-btn" commandfor="requests-table" command="--sort"><span>Status</span><svg class="sort-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m18 15-6-6-6 6"/></svg></button></th>
+                    <th scope="col" data-type="number"><button type="button" class="sort-btn" commandfor="requests-table" command="--sort"><span>Duration</span><svg class="sort-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m18 15-6-6-6 6"/></svg></button></th>
+                    <th scope="col" data-type="text"><button type="button" class="sort-btn" commandfor="requests-table" command="--sort"><span>Proxy</span><svg class="sort-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m18 15-6-6-6 6"/></svg></button></th>
                     <th scope="col">Error</th>
                   </tr>
                 </thead>
@@ -893,21 +2202,30 @@
         </div>
       </div>
 
+      <!-- Models Panel -->
       <div id="panel-models" role="tabpanel" aria-labelledby="tab-models" hidden>
         <div class="panel-inner">
           <section class="section-card" aria-labelledby="catalog-title">
             <div class="section-header">
               <h2 id="catalog-title" class="section-title">Cached Free Models</h2>
-              <span id="catalog-count" class="badge tabular"></span>
+              <div class="toolbar">
+                <div class="search-box search-box-wide">
+                  <svg class="svg-icon svg-icon-sm search-ico" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                  <input id="models-search" class="input" type="search" placeholder="Search model ID or cap..." aria-label="Search cached models">
+                  <button type="button" id="models-search-clear" class="search-clear" aria-label="Clear model search" hidden>&times;</button>
+                </div>
+                <span id="catalog-count" class="badge tabular">0 cached</span>
+              </div>
             </div>
+
             <div tabindex="0" role="region" aria-labelledby="catalog-table-caption" class="table-wrapper">
               <table id="catalog-table">
                 <caption id="catalog-table-caption" class="sr-only">Cached OpenCode free models</caption>
                 <thead>
                   <tr>
-                    <th scope="col">Model ID</th>
-                    <th scope="col">Context</th>
-                    <th scope="col">Max Out</th>
+                    <th scope="col" data-type="text"><button type="button" class="sort-btn" commandfor="catalog-table" command="--sort"><span>Model ID</span><svg class="sort-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m18 15-6-6-6 6"/></svg></button></th>
+                    <th scope="col" data-type="number"><button type="button" class="sort-btn" commandfor="catalog-table" command="--sort"><span>Context</span><svg class="sort-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m18 15-6-6-6 6"/></svg></button></th>
+                    <th scope="col" data-type="number"><button type="button" class="sort-btn" commandfor="catalog-table" command="--sort"><span>Max Out</span><svg class="sort-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m18 15-6-6-6 6"/></svg></button></th>
                     <th scope="col">Capabilities</th>
                     <th scope="col">Thinking Levels</th>
                   </tr>
@@ -918,8 +2236,26 @@
           </section>
         </div>
       </div>
-    </div>
+    </main>
   </div>
+
+  <!-- Detail Inspector Modal Dialog -->
+  <dialog id="detail-dialog" closedby="any" aria-labelledby="detail-dialog-title">
+    <div class="dialog-card">
+      <div class="dialog-head">
+        <h2 id="detail-dialog-title">Details</h2>
+        <button type="button" id="detail-close-x" class="btn-ghost btn-icon" aria-label="Close dialog">&times;</button>
+      </div>
+      <div id="detail-dialog-body" class="dialog-body"></div>
+      <div class="dialog-foot">
+        <button type="button" id="detail-copy-btn" class="btn-secondary">Copy Summary</button>
+        <button type="button" id="detail-close-btn" class="btn-primary">Close</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Toast Stack Region -->
+  <div id="toast-region" class="toast-region" role="region" aria-label="Notifications"></div>
 
   <script nonce="__CSP_NONCE__">
     "use strict";
@@ -929,12 +2265,19 @@
       username: "",
       autoRefresh: true,
       activeTab: "overview",
+      proxyFilter: "all",
+      reqFilter: "all",
       pollTimer: null,
       inFlight: false,
       overview: null,
       proxiesCache: null,
+      sortState: {},
+      detailCopyText: "",
+      lastFocusBeforeToast: null,
     };
 
+    const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
+    const numFmt = new Intl.NumberFormat();
     const timeFmt = new Intl.DateTimeFormat(undefined, {
       hour: "2-digit",
       minute: "2-digit",
@@ -944,6 +2287,59 @@
 
     const el = (id) => document.getElementById(id);
 
+    /* ---------- SVG Icon Helpers (pure DOM construction) ---------- */
+    function svgIcon(paths, className = "svg-icon") {
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("viewBox", "0 0 24 24");
+      svg.setAttribute("fill", "none");
+      svg.setAttribute("stroke", "currentColor");
+      svg.setAttribute("stroke-width", "2");
+      svg.setAttribute("stroke-linecap", "round");
+      svg.setAttribute("stroke-linejoin", "round");
+      svg.setAttribute("aria-hidden", "true");
+      svg.setAttribute("class", className);
+      for (const spec of paths) {
+        const node = document.createElementNS("http://www.w3.org/2000/svg", spec[0]);
+        for (const [k, v] of Object.entries(spec[1])) {
+          node.setAttribute(k, String(v));
+        }
+        svg.appendChild(node);
+      }
+      return svg;
+    }
+
+    function iconForStatus(variant) {
+      if (variant === "ok") {
+        return svgIcon([
+          ["path", { d: "M22 11.08V12a10 10 0 1 1-5.93-9.14" }],
+          ["polyline", { points: "22 4 12 14.01 9 11.01" }],
+        ], "svg-icon svg-icon-sm");
+      }
+      if (variant === "warn") {
+        return svgIcon([
+          ["path", { d: "m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" }],
+          ["line", { x1: 12, y1: 9, x2: 12, y2: 13 }],
+          ["line", { x1: 12, y1: 17, x2: 12.01, y2: 17 }],
+        ], "svg-icon svg-icon-sm");
+      }
+      if (variant === "err") {
+        return svgIcon([
+          ["circle", { cx: 12, cy: 12, r: 10 }],
+          ["path", { d: "m15 9-6 6" }],
+          ["path", { d: "m9 9 6 6" }],
+        ], "svg-icon svg-icon-sm");
+      }
+      return svgIcon([["circle", { cx: 12, cy: 12, r: 9 }]], "svg-icon svg-icon-sm");
+    }
+
+    function iconCopy() {
+      return svgIcon([
+        ["rect", { width: 14, height: 14, x: 8, y: 8, rx: 2, ry: 2 }],
+        ["path", { d: "M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" }],
+      ], "svg-icon svg-icon-sm");
+    }
+
+    /* ---------- DOM & Formatting Utilities ---------- */
     function clearNode(node) {
       while (node.firstChild) {
         node.removeChild(node.firstChild);
@@ -958,11 +2354,45 @@
       return node;
     }
 
-    function makeBadge(label, variant) {
+    function clippedCell(tag, text, spanClass, titleText) {
+      const cell = document.createElement(tag);
+      const span = cellText("span", text, spanClass, titleText);
+      cell.appendChild(span);
+      return cell;
+    }
+
+    function makeBadge(label, variant, withIcon = false) {
       const span = document.createElement("span");
       span.className = variant ? `badge badge-${variant}` : "badge";
-      span.textContent = label;
+      if (withIcon) {
+        span.appendChild(iconForStatus(variant));
+      }
+      span.appendChild(document.createTextNode(label));
       return span;
+    }
+
+    function makeCopyButton(value, label) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "copy-mini";
+      btn.title = `Copy ${label}`;
+      btn.setAttribute("aria-label", `Copy ${label}`);
+      btn.appendChild(iconCopy());
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        void copyText(value, label);
+      });
+      return btn;
+    }
+
+    function makeStatChip(label, value) {
+      const chip = document.createElement("span");
+      chip.className = "stat-chip tabular";
+      chip.appendChild(document.createTextNode(`${label} `));
+      const strong = document.createElement("strong");
+      strong.textContent = String(value);
+      chip.appendChild(strong);
+      return chip;
     }
 
     function renderEmptyRow(tbody, colSpan, message) {
@@ -988,6 +2418,358 @@
       return `${rem}s`;
     }
 
+    function formatCompactInt(n) {
+      const v = Number(n || 0);
+      if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+      if (v >= 1_000) return `${Math.round(v / 1_000)}K`;
+      return String(v);
+    }
+
+    async function copyText(text, label) {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          const ta = document.createElement("textarea");
+          ta.value = text;
+          ta.className = "sr-only";
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand("copy");
+          ta.remove();
+        }
+        showToast(`Copied ${label} to clipboard`, "ok");
+      } catch {
+        showToast(`Failed to copy ${label}`, "err");
+      }
+    }
+
+    /* ---------- Two-State Dark/Light Theme Toggle ---------- */
+    function getSystemScheme() {
+      return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }
+
+    function getCurrentRenderedScheme() {
+      const meta = document.querySelector('meta[name="color-scheme"]');
+      if (meta && (meta.content === "light" || meta.content === "dark")) {
+        return meta.content;
+      }
+      return getSystemScheme();
+    }
+
+    function applyColorSchemeOverride(value) {
+      const meta = document.querySelector('meta[name="color-scheme"]');
+      if (meta) {
+        meta.content = value === "light" || value === "dark" ? value : "light dark";
+      }
+    }
+
+    function toggleColorScheme() {
+      const target = getCurrentRenderedScheme() === "dark" ? "light" : "dark";
+      const system = getSystemScheme();
+      try {
+        if (target === system) {
+          localStorage.removeItem("color-scheme");
+          applyColorSchemeOverride("light dark");
+        } else {
+          localStorage.setItem("color-scheme", target);
+          applyColorSchemeOverride(target);
+        }
+      } catch {
+        applyColorSchemeOverride(target === system ? "light dark" : target);
+      }
+    }
+
+    /* ---------- Persistent Toast Notifications ---------- */
+    function announceText(message) {
+      if (typeof document.ariaNotify === "function") {
+        document.ariaNotify(message);
+      } else {
+        const sr = el("sr-announcer");
+        if (sr) {
+          sr.textContent = "";
+          sr.textContent = message;
+        }
+      }
+    }
+
+    function layoutToasts() {
+      const region = el("toast-region");
+      if (!region) return;
+      const toasts = Array.from(region.querySelectorAll(".toast-item"));
+      let offset = 0;
+      for (let i = toasts.length - 1; i >= 0; i -= 1) {
+        const t = toasts[i];
+        t.style.setProperty("--toast-offset", `${offset}px`);
+        offset += (t.offsetHeight || 46) + 10;
+      }
+    }
+
+    function closeToastNode(toast, returnFocus = false) {
+      if (!toast || !toast.isConnected) return;
+      const wasFocused = toast.contains(document.activeElement);
+      const region = el("toast-region");
+      const siblings = region ? Array.from(region.querySelectorAll(".toast-item")).filter((t) => t !== toast) : [];
+      if ("hidePopover" in toast) {
+        try { toast.hidePopover(); } catch {}
+      }
+      toast.removeAttribute("data-open");
+      toast.remove();
+      layoutToasts();
+      if (returnFocus && wasFocused) {
+        const nextBtn = siblings[0] && siblings[0].querySelector(".toast-close");
+        if (nextBtn) {
+          nextBtn.focus();
+        } else if (state.lastFocusBeforeToast && state.lastFocusBeforeToast.isConnected) {
+          state.lastFocusBeforeToast.focus();
+        }
+      }
+    }
+
+    function showToast(message, variant = "info", durationMs = 3600) {
+      const dialog = el("detail-dialog");
+      if (dialog && dialog.open) {
+        announceText(message);
+        return;
+      }
+      const region = el("toast-region");
+      if (!region) return;
+      state.lastFocusBeforeToast = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+      const toast = document.createElement("div");
+      toast.className = `toast-item toast-${variant}`;
+      toast.setAttribute("popover", "manual");
+
+      const body = document.createElement("div");
+      body.className = "toast-body";
+      const icoVariant = variant === "info" ? "neutral" : variant;
+      body.appendChild(iconForStatus(icoVariant));
+      const msgSpan = document.createElement("span");
+      msgSpan.textContent = message;
+      body.appendChild(msgSpan);
+
+      const closeBtn = document.createElement("button");
+      closeBtn.type = "button";
+      closeBtn.className = "toast-close";
+      closeBtn.setAttribute("aria-label", "Dismiss notification");
+      closeBtn.setAttribute("popovertargetaction", "hide");
+      closeBtn.textContent = "×";
+      closeBtn.addEventListener("click", () => closeToastNode(toast, true));
+
+      toast.appendChild(body);
+      toast.appendChild(closeBtn);
+      region.appendChild(toast);
+
+      if ("showPopover" in toast) {
+        try { toast.showPopover(); } catch {}
+      } else {
+        toast.setAttribute("data-open", "");
+      }
+      layoutToasts();
+
+      announceText(message);
+
+      let timer = window.setTimeout(() => {
+        if (!toast.contains(document.activeElement)) {
+          closeToastNode(toast, false);
+        }
+      }, durationMs);
+
+      const pause = () => {
+        if (timer !== null) {
+          window.clearTimeout(timer);
+          timer = null;
+        }
+      };
+      const resume = () => {
+        pause();
+        timer = window.setTimeout(() => {
+          if (!toast.contains(document.activeElement)) {
+            closeToastNode(toast, false);
+          }
+        }, 1600);
+      };
+      toast.addEventListener("mouseenter", pause);
+      toast.addEventListener("focusin", pause);
+      toast.addEventListener("mouseleave", resume);
+      toast.addEventListener("focusout", resume);
+    }
+
+    /* ---------- Top-Layer Animated Detail Dialog ---------- */
+    let supportsDisplayTransitionCache;
+    function canTransitionDisplay() {
+      if (supportsDisplayTransitionCache !== undefined) return supportsDisplayTransitionCache;
+      if (!window.CSS?.supports?.("transition-behavior", "allow-discrete") || !document.body) {
+        return false;
+      }
+      const probe = document.createElement("div");
+      probe.style.setProperty("transition", "display 1s allow-discrete", "important");
+      probe.style.display = "block";
+      document.body.appendChild(probe);
+      void getComputedStyle(probe).display;
+      probe.style.display = "none";
+      supportsDisplayTransitionCache = getComputedStyle(probe).display === "block";
+      probe.remove();
+      return supportsDisplayTransitionCache;
+    }
+
+    function supportsTopLayerExit() {
+      return Boolean(window.CSS?.supports?.("overlay", "auto") && canTransitionDisplay());
+    }
+
+    async function closeDetailDialog() {
+      const dialog = el("detail-dialog");
+      if (!dialog || !dialog.open) return;
+      if (!supportsTopLayerExit()) {
+        dialog.setAttribute("data-closing", "");
+        const anims = dialog.getAnimations({ subtree: true });
+        if (anims.length > 0) {
+          await Promise.race([
+            Promise.allSettled(anims.map((a) => a.finished)),
+            new Promise((r) => window.setTimeout(r, 400)),
+          ]);
+        }
+        if (!dialog.hasAttribute("data-closing")) return;
+        dialog.removeAttribute("data-closing");
+      }
+      dialog.close();
+    }
+
+    function openDetailDialog(title, fields, rawBlockText, copyPayload) {
+      const dialog = el("detail-dialog");
+      if (!dialog) return;
+      el("detail-dialog-title").textContent = title;
+      const body = el("detail-dialog-body");
+      clearNode(body);
+
+      const dl = document.createElement("dl");
+      dl.className = "dialog-dl";
+      for (const [k, v] of fields) {
+        const box = document.createElement("div");
+        box.className = "kv-item";
+        box.appendChild(cellText("dt", k));
+        box.appendChild(cellText("dd", v || "-", "mono"));
+        dl.appendChild(box);
+      }
+      body.appendChild(dl);
+
+      if (rawBlockText) {
+        const label = document.createElement("div");
+        label.className = "kpi-label";
+        label.textContent = "Diagnostics / Error Detail";
+        body.appendChild(label);
+        const pre = document.createElement("pre");
+        pre.className = "detail-pre";
+        pre.textContent = rawBlockText;
+        body.appendChild(pre);
+      }
+
+      state.detailCopyText = copyPayload;
+      dialog.removeAttribute("data-closing");
+      dialog.showModal();
+    }
+
+    /* ---------- Sortable Table Engine (Invoker Commands + Fallback) ---------- */
+    function reorderRows(tbody, orderedRows) {
+      if (typeof tbody.moveBefore === "function") {
+        for (const row of orderedRows) {
+          tbody.moveBefore(row, null);
+        }
+      } else {
+        for (const row of orderedRows) {
+          tbody.appendChild(row);
+        }
+      }
+    }
+
+    function applySortToTable(table, th, direction, announce = true) {
+      if (!table || !th || !table.tBodies[0]) return;
+      const tbody = table.tBodies[0];
+      const rows = Array.from(tbody.rows);
+      if (rows.length === 0 || (rows.length === 1 && rows[0].cells.length === 1)) {
+        return;
+      }
+
+      for (const header of table.tHead.rows[0].cells) {
+        header.removeAttribute("aria-sort");
+      }
+      th.setAttribute("aria-sort", direction);
+
+      const colIndex = th.cellIndex;
+      const type = th.dataset.type || "text";
+      const factor = direction === "ascending" ? 1 : -1;
+
+      const keyed = rows.map((row) => {
+        const cell = row.cells[colIndex];
+        const raw = cell ? (cell.dataset.value ?? cell.textContent.trim()) : "";
+        const val = type === "number" ? Number(raw || 0) : raw;
+        return { row, val };
+      });
+
+      keyed.sort((a, b) => {
+        if (type === "number") {
+          const av = Number.isFinite(a.val) ? a.val : -Infinity;
+          const bv = Number.isFinite(b.val) ? b.val : -Infinity;
+          return factor * (av - bv);
+        }
+        return factor * collator.compare(String(a.val), String(b.val));
+      });
+
+      const sortedRows = keyed.map((k) => k.row);
+      const applyOrder = () => reorderRows(tbody, sortedRows);
+
+      if (announce && typeof table.startViewTransition === "function" && rows.length <= 120) {
+        table.startViewTransition(applyOrder);
+      } else {
+        applyOrder();
+      }
+
+      state.sortState[table.id] = { colIndex, direction };
+
+      if (announce) {
+        const statusEl = el("sort-status");
+        const label = th.textContent.trim();
+        if (statusEl) {
+          statusEl.textContent = `Sorted by ${label}, ${direction}, ${sortedRows.length} rows`;
+        }
+      }
+    }
+
+    function reapplySavedSort(tableId) {
+      const saved = state.sortState[tableId];
+      if (!saved) return;
+      const table = el(tableId);
+      if (!table || !table.tHead || !table.tHead.rows[0]) return;
+      const th = table.tHead.rows[0].cells[saved.colIndex];
+      if (th) {
+        applySortToTable(table, th, saved.direction, false);
+      }
+    }
+
+    function wireSortableTables() {
+      const supportsCommands = "commandForElement" in HTMLButtonElement.prototype;
+      for (const table of document.querySelectorAll("table")) {
+        const handleSortTrigger = (btn) => {
+          const th = btn.closest("th");
+          if (!th) return;
+          const nextDir = th.getAttribute("aria-sort") === "ascending" ? "descending" : "ascending";
+          applySortToTable(table, th, nextDir, true);
+        };
+
+        table.addEventListener("command", (event) => {
+          if (event.command !== "--sort" || !event.source) return;
+          handleSortTrigger(event.source);
+        });
+
+        if (!supportsCommands) {
+          for (const btn of table.querySelectorAll('thead button[command="--sort"]')) {
+            btn.addEventListener("click", () => handleSortTrigger(btn));
+          }
+        }
+      }
+    }
+
+    /* ---------- API Fetching & Auth State ---------- */
     async function apiJson(url, opts = {}) {
       const res = await fetch(url, {
         credentials: "same-origin",
@@ -1014,11 +2796,12 @@
       el("app-view").hidden = true;
       el("login-view").hidden = false;
       const errBox = el("login-error");
+      const errTxt = el("login-error-text");
       if (errorMsg) {
-        errBox.textContent = errorMsg;
+        errTxt.textContent = errorMsg;
         errBox.hidden = false;
       } else {
-        errBox.textContent = "";
+        errTxt.textContent = "";
         errBox.hidden = true;
       }
       el("username").focus();
@@ -1028,6 +2811,7 @@
       state.authenticated = true;
       state.username = username || "admin";
       el("user-badge").textContent = state.username;
+      el("user-avatar").textContent = (state.username.trim()[0] || "A").toUpperCase();
       el("login-view").hidden = true;
       el("app-view").hidden = false;
       startPolling();
@@ -1054,6 +2838,8 @@
     async function refreshAll() {
       if (!state.authenticated || state.inFlight) return;
       state.inFlight = true;
+      const refreshBtn = el("refresh-now-btn");
+      refreshBtn.classList.add("is-spinning");
       try {
         const overview = await apiJson("/dashboard/api/overview");
         state.overview = overview;
@@ -1067,34 +2853,47 @@
         el("last-updated").textContent = `Updated ${timeFmt.format(new Date())}`;
       } catch (err) {
         if (err && err.message !== "Unauthorized") {
-          el("last-updated").textContent = `Error: ${err.message}`;
+          el("last-updated").textContent = `Sync error: ${err.message}`;
         }
       } finally {
+        refreshBtn.classList.remove("is-spinning");
         state.inFlight = false;
       }
     }
 
     async function refreshProxiesTab() {
-      const status = el("proxy-status-filter").value;
       const q = el("proxy-search").value.trim();
-      const params = new URLSearchParams({ status, limit: "300" });
+      const params = new URLSearchParams({ status: state.proxyFilter, limit: "300" });
       if (q) params.set("q", q);
       const data = await apiJson(`/dashboard/api/proxies?${params.toString()}`);
       state.proxiesCache = data;
       renderProxiesTable(data.proxies || [], data.stats);
     }
 
+    /* ---------- Rendering: Overview & Telemetry ---------- */
     function renderOverview(data) {
       const srv = data.server || {};
+      const dash = data.dashboard || {};
       const cfg = data.config || {};
-      const summary = (data.metrics && data.metrics.summary) || {};
+      const metrics = data.metrics || {};
+      const summary = metrics.summary || {};
       const pool = data.proxy_pool;
+      const models = data.models || [];
+      const recentReqs = metrics.recent_requests || [];
 
-      // Chain badge
+      // Tab counts
+      el("tab-count-proxies").textContent = String(pool ? pool.total : 0);
+      el("tab-count-requests").textContent = String(summary.total_requests || 0);
+      el("tab-count-models").textContent = String(models.length);
+
+      // Chain badge in header
       const chainBadge = el("chain-badge");
       if (cfg.chain_proxy) {
-        chainBadge.textContent = `Chained via ${cfg.chain_proxy}`;
-        chainBadge.className = pool && pool.hop1_healthy === false ? "badge badge-err" : "badge badge-ok";
+        clearNode(chainBadge);
+        const ok = !(pool && pool.hop1_healthy === false);
+        chainBadge.className = ok ? "badge badge-ok" : "badge badge-err";
+        chainBadge.appendChild(iconForStatus(ok ? "ok" : "err"));
+        chainBadge.appendChild(document.createTextNode(`Chain: ${cfg.chain_proxy}`));
         chainBadge.hidden = false;
       } else {
         chainBadge.hidden = true;
@@ -1102,27 +2901,40 @@
 
       // KPI 1: Server & Load
       el("kpi-uptime").textContent = formatUptime(srv.uptime_secs);
-      el("kpi-inflight").textContent = `In-flight: ${summary.in_flight_requests || 0} | Cached models: ${(data.models || []).length}`;
+      const loadChips = el("kpi-load-chips");
+      clearNode(loadChips);
+      loadChips.appendChild(makeStatChip("In-flight", summary.in_flight_requests || 0));
+      loadChips.appendChild(makeStatChip("Models", models.length));
 
       // KPI 2: Requests & Latency
       const totalReq = summary.total_requests || 0;
       const okReq = summary.success_requests || 0;
-      const okRate = totalReq > 0 ? `${Math.round((okReq * 100) / totalReq)}% ok` : "No requests yet";
-      el("kpi-requests").textContent = `${totalReq} (${okRate})`;
-      el("kpi-latency").textContent = `Avg ${summary.avg_latency_ms || 0} ms | Chat ${summary.chat_requests || 0} (SSE ${summary.streaming_requests || 0})`;
+      const pctOk = totalReq > 0 ? Math.round((okReq * 100) / totalReq) : null;
+      el("kpi-requests").textContent = numFmt.format(totalReq);
+      const okPill = el("kpi-ok-pill");
+      if (pctOk === null) {
+        okPill.className = "badge";
+        okPill.textContent = "Idle";
+      } else {
+        okPill.className = pctOk >= 90 ? "badge badge-ok" : pctOk >= 60 ? "badge badge-warn" : "badge badge-err";
+        okPill.textContent = `${pctOk}% ok`;
+      }
+      const latChips = el("kpi-latency-chips");
+      clearNode(latChips);
+      latChips.appendChild(makeStatChip("Avg", `${summary.avg_latency_ms || 0} ms`));
+      latChips.appendChild(makeStatChip("Chat", summary.chat_requests || 0));
+      latChips.appendChild(makeStatChip("SSE", summary.streaming_requests || 0));
 
       // KPI 3: Proxy Pool Health
       const bar = el("kpi-health-bar");
       clearNode(bar);
+      const poolChips = el("kpi-pool-chips");
+      clearNode(poolChips);
       if (!pool) {
         el("kpi-pool-health").textContent = "Disabled";
-        el("kpi-pool-sub").textContent = cfg.chain_proxy ? `Single proxy: ${cfg.chain_proxy}` : "Direct connection";
+        poolChips.appendChild(makeStatChip("Mode", cfg.chain_proxy ? "Single proxy" : "Direct"));
       } else {
         el("kpi-pool-health").textContent = `${pool.healthy} / ${pool.total} healthy`;
-        const resetPart = pool.earliest_cooldown_secs !== null && pool.earliest_cooldown_secs !== undefined
-          ? ` | Next reset ${pool.earliest_cooldown_secs}s`
-          : "";
-        el("kpi-pool-sub").textContent = `Cooldown ${pool.cooldown} | Untested ${pool.untested} | Dead ${pool.dead}${resetPart}`;
         for (const [count, cls] of [
           [pool.healthy, "seg-ok"],
           [pool.cooldown, "seg-warn"],
@@ -1136,22 +2948,49 @@
             bar.appendChild(seg);
           }
         }
+        poolChips.appendChild(makeStatChip("Cooldown", pool.cooldown));
+        poolChips.appendChild(makeStatChip("Untested", pool.untested));
+        poolChips.appendChild(makeStatChip("Dead", pool.dead));
       }
 
       // KPI 4: Active Proxy & Failover
-      if (!pool) {
-        el("kpi-active-proxy").textContent = cfg.chain_proxy || "Direct";
-        el("kpi-switches").textContent = "Pool rotation disabled";
+      const activeText = !pool ? (cfg.chain_proxy || "Direct") : (pool.active_proxy || "Standby warming");
+      el("kpi-active-proxy").textContent = activeText;
+      el("kpi-active-proxy").title = activeText;
+      const copyActiveBtn = el("copy-active-proxy-btn");
+      if (pool && pool.active_proxy) {
+        copyActiveBtn.hidden = false;
+        copyActiveBtn.dataset.copyVal = pool.active_proxy;
+      } else if (cfg.chain_proxy) {
+        copyActiveBtn.hidden = false;
+        copyActiveBtn.dataset.copyVal = cfg.chain_proxy;
       } else {
-        el("kpi-active-proxy").textContent = pool.active_proxy || "None selected";
-        const rttText = pool.active_rtt_ms !== null && pool.active_rtt_ms !== undefined ? `${pool.active_rtt_ms} ms` : "-";
-        el("kpi-switches").textContent = `RTT ${rttText} | Switches ${pool.switches_total} | Hedged wins ${pool.hedged_wins}`;
+        copyActiveBtn.hidden = true;
       }
 
-      // Overview Tokens & Config KV
-      el("overview-tokens").textContent = `Tokens: ${summary.total_tokens || 0} (in ${summary.prompt_tokens || 0} / out ${summary.completion_tokens || 0})`;
-      const dash = data.dashboard || {};
+      const switchChips = el("kpi-switch-chips");
+      clearNode(switchChips);
+      if (!pool) {
+        switchChips.appendChild(makeStatChip("Rotation", "Off"));
+      } else {
+        const rttText = pool.active_rtt_ms !== null && pool.active_rtt_ms !== undefined ? `${pool.active_rtt_ms} ms` : "-";
+        switchChips.appendChild(makeStatChip("RTT", rttText));
+        switchChips.appendChild(makeStatChip("Switches", pool.switches_total));
+        switchChips.appendChild(makeStatChip("Hedged", pool.hedged_wins));
+      }
+
+      // Overview Pool Donut Card
+      renderPoolDonut(pool);
+
+      // Overview Telemetry Sparkline & Tokens
+      renderLatencyChart(recentReqs, srv);
+      el("tok-prompt").textContent = numFmt.format(summary.prompt_tokens || 0);
+      el("tok-completion").textContent = numFmt.format(summary.completion_tokens || 0);
+      el("tok-total").textContent = numFmt.format(summary.total_tokens || 0);
+
+      // Runtime Config KV
       const dashMode = dash.separate_listener ? "dedicated" : "shared";
+      el("cfg-listen-badge").textContent = `API :${srv.port || 8080} · UI :${dash.port || srv.port || 8080}`;
       const kv = el("config-kv");
       clearNode(kv);
       const kvPairs = [
@@ -1173,12 +3012,159 @@
         kv.appendChild(box);
       }
 
-      renderModelUsageTable((data.metrics && data.metrics.models) || []);
-      renderRequestsTable((data.metrics && data.metrics.recent_requests) || []);
-      renderCatalogTable(data.models || []);
+      renderModelUsageTable(metrics.models || []);
+      renderRequestsTable(recentReqs);
+      renderCatalogTable(models);
     }
 
+    function renderPoolDonut(pool) {
+      const donut = el("pool-donut");
+      const legend = el("pool-legend");
+      const note = el("pool-overview-note");
+      clearNode(legend);
+
+      if (!pool) {
+        el("donut-pct").textContent = "Off";
+        donut.style.setProperty("--stop-ok", "0deg");
+        donut.style.setProperty("--stop-warn", "0deg");
+        donut.style.setProperty("--stop-err", "0deg");
+        donut.setAttribute("aria-label", "Proxy pool disabled");
+        note.textContent = "Proxy pool rotation is disabled in configuration.";
+        return;
+      }
+
+      const total = Math.max(pool.total || 0, 0);
+      const readyPct = total > 0 ? Math.round((pool.healthy * 100) / total) : 0;
+      el("donut-pct").textContent = `${readyPct}%`;
+      donut.setAttribute(
+        "aria-label",
+        `Proxy pool: ${pool.healthy} healthy, ${pool.cooldown} cooldown, ${pool.untested} untested, ${pool.dead} dead out of ${total}`
+      );
+
+      if (total > 0) {
+        const degOk = (pool.healthy / total) * 360;
+        const degWarn = degOk + (pool.cooldown / total) * 360;
+        const degErr = degWarn + (pool.dead / total) * 360;
+        donut.style.setProperty("--stop-ok", `${degOk.toFixed(1)}deg`);
+        donut.style.setProperty("--stop-warn", `${degWarn.toFixed(1)}deg`);
+        donut.style.setProperty("--stop-err", `${degErr.toFixed(1)}deg`);
+      } else {
+        donut.style.setProperty("--stop-ok", "0deg");
+        donut.style.setProperty("--stop-warn", "0deg");
+        donut.style.setProperty("--stop-err", "0deg");
+      }
+
+      const items = [
+        ["Healthy", pool.healthy, "ok", "legend-ok"],
+        ["Cooldown", pool.cooldown, "warn", "legend-warn"],
+        ["Untested", pool.untested, "neutral", ""],
+        ["Dead", pool.dead, "err", "legend-err"],
+      ];
+      for (const [label, val, iconVar, cls] of items) {
+        const box = document.createElement("div");
+        box.className = "legend-item";
+        const dt = document.createElement("dt");
+        const icoWrap = document.createElement("span");
+        icoWrap.className = cls;
+        icoWrap.appendChild(iconForStatus(iconVar));
+        dt.appendChild(icoWrap);
+        dt.appendChild(document.createTextNode(label));
+        const dd = document.createElement("dd");
+        dd.className = "tabular";
+        dd.textContent = numFmt.format(val);
+        box.appendChild(dt);
+        box.appendChild(dd);
+        legend.appendChild(box);
+      }
+
+      const parts = [];
+      if (pool.hop1_healthy === false) parts.push("Chain Hop 1 unreachable");
+      if (pool.earliest_cooldown_secs !== null && pool.earliest_cooldown_secs !== undefined) {
+        parts.push(`Next cooldown reset in ${pool.earliest_cooldown_secs}s`);
+      }
+      parts.push(`Total switches: ${pool.switches_total || 0}`);
+      note.textContent = parts.join(" · ");
+    }
+
+    function renderLatencyChart(recentReqs, srv) {
+      const wrap = el("spark-wrap");
+      clearNode(wrap);
+      const sample = recentReqs.slice(0, 24).reverse();
+
+      if (sample.length === 0) {
+        const box = document.createElement("div");
+        box.className = "ready-box";
+        const left = document.createElement("div");
+        const t = document.createElement("p");
+        t.className = "ready-title";
+        t.textContent = "API endpoint ready — no requests recorded yet";
+        const url = `http://${srv.host || "127.0.0.1"}:${srv.port || 8080}/v1/chat/completions`;
+        const code = document.createElement("span");
+        code.className = "mono";
+        code.textContent = url;
+        left.appendChild(t);
+        left.appendChild(code);
+
+        const copyBtn = document.createElement("button");
+        copyBtn.type = "button";
+        copyBtn.className = "btn-secondary";
+        copyBtn.appendChild(iconCopy());
+        copyBtn.appendChild(document.createTextNode("Copy URL"));
+        copyBtn.addEventListener("click", () => void copyText(url, "API endpoint"));
+
+        box.appendChild(left);
+        box.appendChild(copyBtn);
+        wrap.appendChild(box);
+        el("telemetry-range").textContent = "Waiting for traffic";
+        return;
+      }
+
+      const maxMs = Math.max(100, ...sample.map((r) => Number(r.duration_ms || 0)));
+      el("telemetry-range").textContent = `Last ${sample.length} req · peak ${maxMs} ms`;
+
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("class", "spark-svg");
+      svg.setAttribute("viewBox", "0 0 240 68");
+      svg.setAttribute("role", "img");
+      svg.setAttribute("aria-label", `Latency chart for last ${sample.length} requests, peak ${maxMs} milliseconds`);
+
+      for (const y of [16, 36, 56]) {
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("class", "spark-gridline");
+        line.setAttribute("x1", "0");
+        line.setAttribute("x2", "240");
+        line.setAttribute("y1", String(y));
+        line.setAttribute("y2", String(y));
+        svg.appendChild(line);
+      }
+
+      const slotW = 240 / Math.max(sample.length, 1);
+      const barW = Math.max(3, Math.min(12, slotW - 2.5));
+      sample.forEach((r, idx) => {
+        const dur = Math.max(1, Number(r.duration_ms || 0));
+        const h = Math.max(4, Math.round((dur / maxMs) * 58));
+        const x = idx * slotW + (slotW - barW) / 2;
+        const y = 64 - h;
+        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        rect.setAttribute("x", x.toFixed(1));
+        rect.setAttribute("y", String(y));
+        rect.setAttribute("width", barW.toFixed(1));
+        rect.setAttribute("height", String(h));
+        rect.setAttribute("rx", "2");
+        const cls = r.status >= 500 ? "spark-bar-err" : r.status >= 400 ? "spark-bar-warn" : "spark-bar-ok";
+        rect.setAttribute("class", cls);
+        const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
+        title.textContent = `${r.method} ${r.path} · ${r.status} · ${dur} ms`;
+        rect.appendChild(title);
+        svg.appendChild(rect);
+      });
+
+      wrap.appendChild(svg);
+    }
+
+    /* ---------- Rendering: Tables ---------- */
     function renderModelUsageTable(models) {
+      el("usage-models-count").textContent = `${models.length} active`;
       const tbody = el("models-usage-body");
       if (!models.length) {
         renderEmptyRow(tbody, 6, "No chat model requests recorded yet.");
@@ -1187,21 +3173,38 @@
       clearNode(tbody);
       for (const m of models) {
         const tr = document.createElement("tr");
-        tr.appendChild(cellText("th", m.model, "mono cell-clip", m.model));
-        tr.appendChild(cellText("td", String(m.requests), "tabular"));
-        tr.appendChild(cellText("td", String(m.successes), "tabular"));
-        tr.appendChild(cellText("td", String(m.errors), "tabular"));
-        tr.appendChild(cellText("td", `${m.avg_latency_ms} ms`, "tabular"));
-        tr.appendChild(cellText("td", m.last_used_ms ? timeFmt.format(new Date(m.last_used_ms)) : "-", "tabular"));
+        tr.appendChild(clippedCell("th", m.model, "mono cell-clip", m.model));
+
+        const tdReq = cellText("td", numFmt.format(m.requests), "tabular");
+        tdReq.dataset.value = String(m.requests);
+        tr.appendChild(tdReq);
+
+        const tdOk = cellText("td", numFmt.format(m.successes), "tabular");
+        tdOk.dataset.value = String(m.successes);
+        tr.appendChild(tdOk);
+
+        const tdErr = cellText("td", numFmt.format(m.errors), "tabular");
+        tdErr.dataset.value = String(m.errors);
+        tr.appendChild(tdErr);
+
+        const tdLat = cellText("td", `${m.avg_latency_ms} ms`, "tabular");
+        tdLat.dataset.value = String(m.avg_latency_ms);
+        tr.appendChild(tdLat);
+
+        const tdUsed = cellText("td", m.last_used_ms ? timeFmt.format(new Date(m.last_used_ms)) : "-", "tabular");
+        tdUsed.dataset.value = String(m.last_used_ms || 0);
+        tr.appendChild(tdUsed);
+
         tbody.appendChild(tr);
       }
+      reapplySavedSort("models-usage-table");
     }
 
     function statusBadgeForProxy(status) {
-      if (status === "healthy") return makeBadge("healthy", "ok");
-      if (status && status.startsWith("cooldown")) return makeBadge(status, "warn");
-      if (status === "dead") return makeBadge("dead", "err");
-      return makeBadge(status || "untested", "");
+      if (status === "healthy") return makeBadge("healthy", "ok", true);
+      if (status && status.startsWith("cooldown")) return makeBadge(status, "warn", true);
+      if (status === "dead") return makeBadge("dead", "err", true);
+      return makeBadge(status || "untested", "", true);
     }
 
     function renderProxiesTable(proxies, poolStats) {
@@ -1210,13 +3213,16 @@
         renderEmptyRow(tbody, 7, "Proxy pool is disabled in configuration.");
         return;
       }
-      const statusFilter = el("proxy-status-filter").value;
+
+      const activeProxy = state.overview?.proxy_pool?.active_proxy || poolStats.active_proxy || null;
       const query = el("proxy-search").value.trim().toLowerCase();
+      el("proxy-search-clear").hidden = !query;
+
       const filtered = proxies.filter((p) => {
-        if (statusFilter === "healthy" && p.status !== "healthy") return false;
-        if (statusFilter === "cooldown" && !(p.status || "").startsWith("cooldown")) return false;
-        if (statusFilter === "untested" && p.status !== "untested") return false;
-        if (statusFilter === "dead" && p.status !== "dead") return false;
+        if (state.proxyFilter === "healthy" && p.status !== "healthy") return false;
+        if (state.proxyFilter === "cooldown" && !(p.status || "").startsWith("cooldown")) return false;
+        if (state.proxyFilter === "untested" && p.status !== "untested") return false;
+        if (state.proxyFilter === "dead" && p.status !== "dead") return false;
         if (query) {
           const hay = `${p.proxy} ${p.protocol} ${p.status} ${p.last_error || ""}`.toLowerCase();
           if (!hay.includes(query)) return false;
@@ -1232,37 +3238,106 @@
       clearNode(tbody);
       for (const p of filtered) {
         const tr = document.createElement("tr");
-        tr.appendChild(cellText("th", p.proxy, "mono cell-clip", p.proxy));
+        tr.className = "clickable-row";
+
+        const th = document.createElement("th");
+        const wrap = document.createElement("div");
+        wrap.className = "cell-flex";
+        const addrSpan = cellText("span", p.proxy, "mono cell-clip", p.proxy);
+        wrap.appendChild(addrSpan);
+        if (activeProxy && p.proxy === activeProxy) {
+          wrap.appendChild(makeBadge("active", "accent", false));
+        }
+        wrap.appendChild(makeCopyButton(p.proxy, "proxy"));
+        th.appendChild(wrap);
+        tr.appendChild(th);
+
         const tdStatus = document.createElement("td");
+        tdStatus.dataset.value = p.status;
         tdStatus.appendChild(statusBadgeForProxy(p.status));
         tr.appendChild(tdStatus);
-        tr.appendChild(cellText("td", p.protocol, "mono"));
+
+        const tdProto = document.createElement("td");
+        tdProto.dataset.value = p.protocol;
+        const protoChip = document.createElement("span");
+        protoChip.className = "micro-chip mono";
+        protoChip.textContent = p.protocol;
+        tdProto.appendChild(protoChip);
+        tr.appendChild(tdProto);
+
         const rtt = p.ewma_rtt_ms ?? p.rtt_ms;
-        tr.appendChild(cellText("td", rtt !== null && rtt !== undefined ? `${rtt} ms` : "-", "tabular"));
-        tr.appendChild(cellText("td", String(p.ok_count || 0), "tabular"));
-        tr.appendChild(cellText("td", p.is_static ? "yes" : "no"));
+        const tdRtt = document.createElement("td");
+        tdRtt.dataset.value = rtt !== null && rtt !== undefined ? String(rtt) : "999999";
+        if (rtt !== null && rtt !== undefined) {
+          const rttBox = document.createElement("div");
+          rttBox.className = "rtt-cell tabular";
+          const meter = document.createElement("span");
+          meter.className = "rtt-meter";
+          meter.setAttribute("aria-hidden", "true");
+          const fill = document.createElement("span");
+          const pct = Math.min(100, Math.max(12, Math.round((rtt / 1500) * 100)));
+          fill.className = rtt > 900 ? "rtt-fill rtt-fill-err" : rtt > 400 ? "rtt-fill rtt-fill-warn" : "rtt-fill";
+          fill.style.inlineSize = `${pct}%`;
+          meter.appendChild(fill);
+          rttBox.appendChild(meter);
+          rttBox.appendChild(document.createTextNode(`${rtt} ms`));
+          tdRtt.appendChild(rttBox);
+        } else {
+          tdRtt.textContent = "-";
+        }
+        tr.appendChild(tdRtt);
+
+        const tdOk = cellText("td", String(p.ok_count || 0), "tabular");
+        tdOk.dataset.value = String(p.ok_count || 0);
+        tr.appendChild(tdOk);
+
+        const srcText = p.is_static ? "static" : "pool URL";
+        const tdSrc = cellText("td", srcText);
+        tdSrc.dataset.value = srcText;
+        tr.appendChild(tdSrc);
+
         const parts = [];
         if (p.cooldown_remaining_secs !== null && p.cooldown_remaining_secs !== undefined) {
           parts.push(`reset ${p.cooldown_remaining_secs}s`);
         }
         if (p.last_error) parts.push(p.last_error);
         const detail = parts.join(" | ") || "-";
-        tr.appendChild(cellText("td", detail, "cell-clip", detail));
+        tr.appendChild(clippedCell("td", detail, "cell-clip cell-detail", detail));
+
+        tr.addEventListener("click", () => {
+          openDetailDialog(
+            `Proxy · ${p.proxy}`,
+            [
+              ["Proxy URL", p.proxy],
+              ["Status", p.status],
+              ["Protocol", p.protocol],
+              ["RTT / EWMA", rtt !== null && rtt !== undefined ? `${rtt} ms` : "-"],
+              ["OK Count", String(p.ok_count || 0)],
+              ["Consecutive Fails", String(p.consecutive_failures || 0)],
+              ["Cooldown Remaining", p.cooldown_remaining_secs !== null && p.cooldown_remaining_secs !== undefined ? `${p.cooldown_remaining_secs}s` : "-"],
+              ["Source", srcText],
+            ],
+            p.last_error || "No errors recorded for this proxy.",
+            `${p.proxy} (${p.status}, ${p.protocol})`
+          );
+        });
+
         tbody.appendChild(tr);
       }
+      reapplySavedSort("proxies-table");
     }
 
     function renderRequestsTable(requests) {
       const tbody = el("requests-body");
-      const statusFilter = el("req-status-filter").value;
       const query = el("req-search").value.trim().toLowerCase();
+      el("req-search-clear").hidden = !query;
 
       const filtered = requests.filter((r) => {
-        if (statusFilter === "2xx" && (r.status < 200 || r.status >= 300)) return false;
-        if (statusFilter === "4xx" && (r.status < 400 || r.status >= 500)) return false;
-        if (statusFilter === "5xx" && r.status < 500) return false;
+        if (state.reqFilter === "2xx" && (r.status < 200 || r.status >= 300)) return false;
+        if (state.reqFilter === "4xx" && (r.status < 400 || r.status >= 500)) return false;
+        if (state.reqFilter === "5xx" && r.status < 500) return false;
         if (query) {
-          const hay = `${r.path} ${r.model || ""} ${r.proxy || ""} ${r.error || ""}`.toLowerCase();
+          const hay = `${r.method} ${r.path} ${r.model || ""} ${r.proxy || ""} ${r.error || ""}`.toLowerCase();
           if (!hay.includes(query)) return false;
         }
         return true;
@@ -1276,46 +3351,150 @@
       clearNode(tbody);
       for (const r of filtered) {
         const tr = document.createElement("tr");
-        tr.appendChild(cellText("th", timeFmt.format(new Date(r.timestamp_ms)), "tabular"));
-        tr.appendChild(cellText("td", `${r.method} ${r.path}`, "mono cell-clip", r.path));
-        tr.appendChild(cellText("td", r.model || "-", "mono cell-clip", r.model || ""));
+        tr.className = "clickable-row";
+
+        const thTime = cellText("th", timeFmt.format(new Date(r.timestamp_ms)), "tabular");
+        thTime.dataset.value = String(r.timestamp_ms || 0);
+        tr.appendChild(thTime);
+
+        const tdEp = document.createElement("td");
+        tdEp.dataset.value = `${r.method} ${r.path}`;
+        const epWrap = document.createElement("div");
+        epWrap.className = "cell-flex";
+        const mChip = document.createElement("span");
+        mChip.className = "micro-chip micro-chip-accent mono";
+        mChip.textContent = r.method;
+        epWrap.appendChild(mChip);
+        epWrap.appendChild(cellText("span", r.path, "mono cell-clip", r.path));
+        tdEp.appendChild(epWrap);
+        tr.appendChild(tdEp);
+
+        tr.appendChild(clippedCell("td", r.model || "-", "mono cell-clip", r.model || ""));
+
         const mode = r.stream === true ? "SSE" : r.stream === false ? "JSON" : "-";
-        tr.appendChild(cellText("td", mode));
+        const tdMode = document.createElement("td");
+        tdMode.dataset.value = mode;
+        const modeChip = document.createElement("span");
+        modeChip.className = "micro-chip";
+        modeChip.textContent = mode;
+        tdMode.appendChild(modeChip);
+        tr.appendChild(tdMode);
 
         const tdStatus = document.createElement("td");
+        tdStatus.dataset.value = String(r.status);
         const variant = r.status >= 500 ? "err" : r.status >= 400 ? "warn" : "ok";
-        tdStatus.appendChild(makeBadge(String(r.status), variant));
+        tdStatus.appendChild(makeBadge(String(r.status), variant, true));
         tr.appendChild(tdStatus);
 
-        tr.appendChild(cellText("td", `${r.duration_ms} ms`, "tabular"));
-        tr.appendChild(cellText("td", r.proxy || "direct", "mono cell-clip", r.proxy || "direct"));
-        tr.appendChild(cellText("td", r.error || "-", "cell-clip", r.error || ""));
+        const tdDur = cellText("td", `${r.duration_ms} ms`, "tabular");
+        tdDur.dataset.value = String(r.duration_ms || 0);
+        tr.appendChild(tdDur);
+
+        tr.appendChild(clippedCell("td", r.proxy || "direct", "mono cell-clip", r.proxy || "direct"));
+        tr.appendChild(clippedCell("td", r.error || "-", "cell-clip cell-detail", r.error || ""));
+
+        tr.addEventListener("click", () => {
+          openDetailDialog(
+            `Request · ${r.method} ${r.path}`,
+            [
+              ["Time", timeFmt.format(new Date(r.timestamp_ms))],
+              ["HTTP Status", String(r.status)],
+              ["Model", r.model || "-"],
+              ["Mode", mode],
+              ["Duration", `${r.duration_ms} ms`],
+              ["Proxy Used", r.proxy || "direct"],
+              ["Prompt Tokens", r.prompt_tokens !== null && r.prompt_tokens !== undefined ? String(r.prompt_tokens) : "-"],
+              ["Completion Tokens", r.completion_tokens !== null && r.completion_tokens !== undefined ? String(r.completion_tokens) : "-"],
+            ],
+            r.error || "Request completed without recorded errors.",
+            `${r.method} ${r.path} -> ${r.status} (${r.duration_ms} ms)`
+          );
+        });
+
         tbody.appendChild(tr);
       }
+      reapplySavedSort("requests-table");
     }
 
     function renderCatalogTable(models) {
-      el("catalog-count").textContent = `${models.length} cached`;
+      const query = el("models-search").value.trim().toLowerCase();
+      el("models-search-clear").hidden = !query;
+
+      const filtered = models.filter((m) => {
+        if (!query) return true;
+        const caps = m.capabilities || "";
+        const levels = Array.isArray(m.thinking_levels) ? m.thinking_levels.join(" ") : "";
+        return `${m.id} ${m.name || ""} ${caps} ${levels}`.toLowerCase().includes(query);
+      });
+
+      el("catalog-count").textContent = `${filtered.length} / ${models.length} cached`;
       const tbody = el("catalog-body");
-      if (!models.length) {
-        renderEmptyRow(tbody, 5, "Model catalog cache is empty (populated on first /v1/models or chat request).");
+      if (!filtered.length) {
+        const msg = models.length === 0
+          ? "Model catalog cache is empty (populated on first /v1/models or chat request)."
+          : "No models match the current search.";
+        renderEmptyRow(tbody, 5, msg);
         return;
       }
+
       clearNode(tbody);
-      for (const m of models) {
+      for (const m of filtered) {
         const tr = document.createElement("tr");
-        tr.appendChild(cellText("th", m.id, "mono cell-clip", m.id));
-        tr.appendChild(cellText("td", m.context_window ? String(m.context_window) : "-", "tabular"));
-        tr.appendChild(cellText("td", m.max_output ? String(m.max_output) : "-", "tabular"));
-        tr.appendChild(cellText("td", m.capabilities || "text"));
-        const levels = Array.isArray(m.thinking_levels) && m.thinking_levels.length
-          ? m.thinking_levels.join(", ")
-          : "-";
-        tr.appendChild(cellText("td", levels, "mono cell-clip", levels));
+
+        const th = document.createElement("th");
+        const wrap = document.createElement("div");
+        wrap.className = "cell-flex";
+        wrap.appendChild(cellText("span", m.id, "mono cell-clip", m.id));
+        wrap.appendChild(makeCopyButton(m.id, "model ID"));
+        th.appendChild(wrap);
+        tr.appendChild(th);
+
+        const tdCtx = cellText("td", m.context_window ? formatCompactInt(m.context_window) : "-", "tabular");
+        tdCtx.dataset.value = String(m.context_window || 0);
+        if (m.context_window) tdCtx.title = `${numFmt.format(m.context_window)} tokens`;
+        tr.appendChild(tdCtx);
+
+        const tdOut = cellText("td", m.max_output ? formatCompactInt(m.max_output) : "-", "tabular");
+        tdOut.dataset.value = String(m.max_output || 0);
+        if (m.max_output) tdOut.title = `${numFmt.format(m.max_output)} tokens`;
+        tr.appendChild(tdOut);
+
+        const tdCaps = document.createElement("td");
+        const capWrap = document.createElement("div");
+        capWrap.className = "chip-row";
+        const capList = (m.capabilities || "text").split(/[,\s]+/).map((s) => s.trim()).filter(Boolean);
+        for (const cap of capList) {
+          const chip = document.createElement("span");
+          chip.className = cap === "reasoning" || cap === "tools" ? "micro-chip micro-chip-accent" : "micro-chip";
+          chip.textContent = cap;
+          capWrap.appendChild(chip);
+        }
+        tdCaps.appendChild(capWrap);
+        tr.appendChild(tdCaps);
+
+        const tdLevels = document.createElement("td");
+        const levels = Array.isArray(m.thinking_levels) ? m.thinking_levels : [];
+        if (levels.length > 0) {
+          const lvWrap = document.createElement("div");
+          lvWrap.className = "chip-row";
+          for (const lv of levels) {
+            const chip = document.createElement("span");
+            chip.className = "micro-chip mono";
+            chip.textContent = lv;
+            lvWrap.appendChild(chip);
+          }
+          tdLevels.appendChild(lvWrap);
+        } else {
+          tdLevels.textContent = "-";
+        }
+        tr.appendChild(tdLevels);
+
         tbody.appendChild(tr);
       }
+      reapplySavedSort("catalog-table");
     }
 
+    /* ---------- Tab Selection & Pool Actions ---------- */
     function selectTab(tabName) {
       state.activeTab = tabName;
       const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
@@ -1323,7 +3502,6 @@
         const key = tab.id.replace(/^tab-/, "");
         const selected = key === tabName;
         tab.setAttribute("aria-selected", selected ? "true" : "false");
-        tab.toggleAttribute("focusgroupstart", selected);
         const panel = el(`panel-${key}`);
         if (panel) {
           panel.hidden = !selected;
@@ -1342,7 +3520,64 @@
       }
     }
 
+    async function triggerProbeAction(triggerBtn) {
+      const msg = el("proxy-action-msg");
+      const btns = [el("probe-btn"), el("ov-probe-btn")].filter(Boolean);
+      btns.forEach((b) => { b.disabled = true; });
+      if (msg) msg.textContent = "Triggering two-stage probe wave...";
+      try {
+        const data = await apiJson("/dashboard/api/proxies/probe", { method: "POST" });
+        const text = data.message || "Two-stage probe wave triggered";
+        if (msg) msg.textContent = text;
+        showToast(text, "ok");
+        await refreshAll();
+      } catch (err) {
+        const errText = `Probe failed: ${err.message}`;
+        if (msg) msg.textContent = errText;
+        showToast(errText, "err");
+      } finally {
+        btns.forEach((b) => { b.disabled = false; });
+        if (triggerBtn && triggerBtn.isConnected) triggerBtn.focus();
+      }
+    }
+
+    async function triggerReloadAction(triggerBtn) {
+      const msg = el("proxy-action-msg");
+      const btns = [el("reload-lists-btn"), el("ov-reload-btn")].filter(Boolean);
+      btns.forEach((b) => { b.disabled = true; });
+      if (msg) msg.textContent = "Fetching proxy list URLs...";
+      try {
+        const data = await apiJson("/dashboard/api/proxies/refresh", { method: "POST" });
+        const r = data.replace || {};
+        const summary = r.aborted_empty
+          ? "Refresh yielded 0 usable proxies; kept previous list."
+          : `Reloaded ${r.total || 0} proxies (kept ${r.kept || 0}, +${r.added || 0}, -${r.removed || 0})`;
+        if (msg) msg.textContent = summary;
+        showToast(summary, r.aborted_empty ? "info" : "ok");
+        await refreshAll();
+      } catch (err) {
+        const errText = `Reload failed: ${err.message}`;
+        if (msg) msg.textContent = errText;
+        showToast(errText, "err");
+      } finally {
+        btns.forEach((b) => { b.disabled = false; });
+        if (triggerBtn && triggerBtn.isConnected) triggerBtn.focus();
+      }
+    }
+
+    /* ---------- Event Wiring ---------- */
     function wireEvents() {
+      // Theme buttons + cross-tab sync
+      for (const btn of document.querySelectorAll(".theme-btn")) {
+        btn.addEventListener("click", toggleColorScheme);
+      }
+      window.addEventListener("storage", (e) => {
+        if (e.key === "color-scheme") {
+          applyColorSchemeOverride(e.newValue);
+        }
+      });
+
+      // Password toggle
       el("toggle-pw").addEventListener("click", () => {
         const pw = el("password");
         const btn = el("toggle-pw");
@@ -1353,12 +3588,15 @@
         btn.setAttribute("aria-label", showing ? "Show password" : "Hide password");
       });
 
+      // Login
       el("login-form").addEventListener("submit", async (e) => {
         e.preventDefault();
         const errBox = el("login-error");
+        const errTxt = el("login-error-text");
         const submitBtn = el("login-submit");
         errBox.hidden = true;
         submitBtn.disabled = true;
+        submitBtn.textContent = "Signing in...";
         try {
           const username = el("username").value;
           const password = el("password").value;
@@ -1370,20 +3608,22 @@
           });
           const data = await res.json().catch(() => ({}));
           if (!res.ok) {
-            errBox.textContent = data.error || "Invalid credentials";
+            errTxt.textContent = data.error || "Invalid credentials";
             errBox.hidden = false;
             return;
           }
           el("password").value = "";
           showApp(data.username || username);
         } catch (err) {
-          errBox.textContent = err ? err.message : "Login failed";
+          errTxt.textContent = err ? err.message : "Login failed";
           errBox.hidden = false;
         } finally {
           submitBtn.disabled = false;
+          submitBtn.textContent = "Sign In";
         }
       });
 
+      // Logout
       el("logout-btn").addEventListener("click", async () => {
         try {
           await fetch("/dashboard/api/logout", { method: "POST", credentials: "same-origin" });
@@ -1392,15 +3632,14 @@
         }
       });
 
-      el("refresh-now-btn").addEventListener("click", () => {
-        void refreshAll();
-      });
-
+      // Refresh & Live toggle
+      el("refresh-now-btn").addEventListener("click", () => void refreshAll());
       el("auto-refresh-btn").addEventListener("click", () => {
         state.autoRefresh = !state.autoRefresh;
         const btn = el("auto-refresh-btn");
         btn.setAttribute("aria-pressed", state.autoRefresh ? "true" : "false");
-        btn.textContent = state.autoRefresh ? "Live: 3s" : "Paused";
+        btn.classList.toggle("is-live", state.autoRefresh);
+        el("live-label").textContent = state.autoRefresh ? "Live · 3s" : "Paused";
         if (state.autoRefresh) {
           startPolling();
           void refreshAll();
@@ -1409,11 +3648,16 @@
         }
       });
 
+      // Active proxy copy button
+      el("copy-active-proxy-btn").addEventListener("click", (e) => {
+        const val = e.currentTarget.dataset.copyVal;
+        if (val) void copyText(val, "active proxy");
+      });
+
+      // Tabs + Keyboard navigation
       const tabButtons = Array.from(document.querySelectorAll('[role="tab"]'));
       for (const tab of tabButtons) {
-        tab.addEventListener("click", () => {
-          selectTab(tab.id.replace(/^tab-/, ""));
-        });
+        tab.addEventListener("click", () => selectTab(tab.id.replace(/^tab-/, "")));
         tab.addEventListener("keydown", (e) => {
           const idx = tabButtons.indexOf(tab);
           let nextIdx = -1;
@@ -1430,9 +3674,18 @@
         });
       }
 
-      el("proxy-status-filter").addEventListener("change", () => {
-        void refreshProxiesTab();
-      });
+      // Segmented proxy filter pills
+      for (const btn of document.querySelectorAll("#proxy-filter-group .seg-btn")) {
+        btn.addEventListener("click", () => {
+          state.proxyFilter = btn.dataset.filter || "all";
+          for (const b of document.querySelectorAll("#proxy-filter-group .seg-btn")) {
+            b.setAttribute("aria-pressed", b === btn ? "true" : "false");
+          }
+          void refreshProxiesTab();
+        });
+      }
+
+      // Proxy search + clear
       el("proxy-search").addEventListener("input", () => {
         if (state.proxiesCache) {
           renderProxiesTable(state.proxiesCache.proxies || [], state.proxiesCache.stats);
@@ -1440,52 +3693,101 @@
           renderProxiesTable(state.overview.proxies || [], state.overview.proxy_pool);
         }
       });
-
-      el("req-status-filter").addEventListener("change", () => {
-        if (state.overview && state.overview.metrics) {
-          renderRequestsTable(state.overview.metrics.recent_requests || []);
-        }
+      el("proxy-search-clear").addEventListener("click", () => {
+        el("proxy-search").value = "";
+        el("proxy-search").focus();
+        el("proxy-search").dispatchEvent(new Event("input"));
       });
+
+      // Segmented request filter pills
+      for (const btn of document.querySelectorAll("#req-filter-group .seg-btn")) {
+        btn.addEventListener("click", () => {
+          state.reqFilter = btn.dataset.filter || "all";
+          for (const b of document.querySelectorAll("#req-filter-group .seg-btn")) {
+            b.setAttribute("aria-pressed", b === btn ? "true" : "false");
+          }
+          if (state.overview && state.overview.metrics) {
+            renderRequestsTable(state.overview.metrics.recent_requests || []);
+          }
+        });
+      }
+
+      // Request search + clear
       el("req-search").addEventListener("input", () => {
         if (state.overview && state.overview.metrics) {
           renderRequestsTable(state.overview.metrics.recent_requests || []);
         }
       });
+      el("req-search-clear").addEventListener("click", () => {
+        el("req-search").value = "";
+        el("req-search").focus();
+        el("req-search").dispatchEvent(new Event("input"));
+      });
 
-      el("probe-btn").addEventListener("click", async () => {
-        const msg = el("proxy-action-msg");
-        const btn = el("probe-btn");
-        btn.disabled = true;
-        msg.textContent = "Triggering two-stage probe wave...";
-        try {
-          const data = await apiJson("/dashboard/api/proxies/probe", { method: "POST" });
-          msg.textContent = data.message || "Probe triggered";
-          await refreshProxiesTab();
-        } catch (err) {
-          msg.textContent = `Probe failed: ${err.message}`;
-        } finally {
-          btn.disabled = false;
+      // Models search + clear
+      el("models-search").addEventListener("input", () => {
+        if (state.overview) {
+          renderCatalogTable(state.overview.models || []);
+        }
+      });
+      el("models-search-clear").addEventListener("click", () => {
+        el("models-search").value = "";
+        el("models-search").focus();
+        el("models-search").dispatchEvent(new Event("input"));
+      });
+
+      // Probe & Reload buttons (both Overview and Proxies tab)
+      el("probe-btn").addEventListener("click", (e) => void triggerProbeAction(e.currentTarget));
+      el("ov-probe-btn").addEventListener("click", (e) => void triggerProbeAction(e.currentTarget));
+      el("reload-lists-btn").addEventListener("click", (e) => void triggerReloadAction(e.currentTarget));
+      el("ov-reload-btn").addEventListener("click", (e) => void triggerReloadAction(e.currentTarget));
+
+      // Detail dialog buttons + cancel animation + closedby fallback
+      const dialog = el("detail-dialog");
+      el("detail-close-x").addEventListener("click", () => void closeDetailDialog());
+      el("detail-close-btn").addEventListener("click", () => void closeDetailDialog());
+      el("detail-copy-btn").addEventListener("click", () => {
+        if (state.detailCopyText) void copyText(state.detailCopyText, "details");
+      });
+      dialog.addEventListener("cancel", (event) => {
+        event.preventDefault();
+        void closeDetailDialog();
+      });
+      if (!("closedBy" in HTMLDialogElement.prototype)) {
+        dialog.addEventListener("click", (event) => {
+          if (event.target !== dialog) return;
+          const rect = dialog.getBoundingClientRect();
+          const inside =
+            rect.top <= event.clientY &&
+            event.clientY <= rect.top + rect.height &&
+            rect.left <= event.clientX &&
+            event.clientX <= rect.left + rect.width;
+          if (!inside) void closeDetailDialog();
+        });
+      }
+
+      // Global shortcuts when authenticated and not typing
+      document.addEventListener("keydown", (e) => {
+        if (!state.authenticated || el("detail-dialog").open) return;
+        if (e.metaKey || e.ctrlKey || e.altKey) return;
+        const tag = document.activeElement ? document.activeElement.tagName : "";
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+        if (e.key === "1") selectTab("overview");
+        else if (e.key === "2") selectTab("proxies");
+        else if (e.key === "3") selectTab("requests");
+        else if (e.key === "4") selectTab("models");
+        else if (e.key === "r" || e.key === "R") void refreshAll();
+        else if (e.key === "/") {
+          const map = { proxies: "proxy-search", requests: "req-search", models: "models-search" };
+          const targetId = map[state.activeTab];
+          if (targetId && el(targetId)) {
+            e.preventDefault();
+            el(targetId).focus();
+          }
         }
       });
 
-      el("reload-lists-btn").addEventListener("click", async () => {
-        const msg = el("proxy-action-msg");
-        const btn = el("reload-lists-btn");
-        btn.disabled = true;
-        msg.textContent = "Fetching proxy list URLs...";
-        try {
-          const data = await apiJson("/dashboard/api/proxies/refresh", { method: "POST" });
-          const r = data.replace || {};
-          msg.textContent = r.aborted_empty
-            ? "Refresh yielded 0 usable proxies; kept previous list."
-            : `Reloaded: total=${r.total || 0}, kept=${r.kept || 0}, added=${r.added || 0}, removed=${r.removed || 0}`;
-          await refreshAll();
-        } catch (err) {
-          msg.textContent = `Reload failed: ${err.message}`;
-        } finally {
-          btn.disabled = false;
-        }
-      });
+      wireSortableTables();
     }
 
     async function boot() {
