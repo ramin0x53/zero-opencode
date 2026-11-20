@@ -54,7 +54,7 @@ opencode:
       fallback_to_base: false
 
 streaming:
-  keep_reasoning_on_json: false  # false = strip reasoning_content in non-stream JSON when content is non-empty
+  keep_reasoning_on_json: true  # false = strip reasoning_content in non-stream JSON when content is non-empty
 
 logging:
   level: "info"              # trace | debug | info | warn | error
