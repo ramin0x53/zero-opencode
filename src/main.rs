@@ -86,6 +86,26 @@ async fn main() -> anyhow::Result<()> {
 
     let result = match cmd {
         Command::Serve => {
+            // Warm the model catalog at startup and keep it refreshed so the dashboard
+            // shows models without needing a prior /v1/models call.
+            {
+                let catalog = catalog.clone();
+                let ttl = Duration::from_secs(config.opencode.models_ttl_secs.max(30));
+                tokio::spawn(async move {
+                    loop {
+                        match catalog.list().await {
+                            Ok(models) => {
+                                tracing::debug!(count = models.len(), "model catalog warmed");
+                                tokio::time::sleep(ttl).await;
+                            }
+                            Err(err) => {
+                                tracing::warn!(error = %err, "model catalog warm-up failed; retrying in 10s");
+                                tokio::time::sleep(Duration::from_secs(10)).await;
+                            }
+                        }
+                    }
+                });
+            }
             let metrics = MetricsStore::new(config.dashboard.max_request_history);
             let dashboard_auth = DashboardAuth::from_config(&config.dashboard);
             let state = Arc::new(AppState {
